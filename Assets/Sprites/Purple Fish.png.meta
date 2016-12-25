@@ -1,10 +1,10 @@
 fileFormatVersion: 2
 guid: 3e9b87a86345ab94ba4ee57a4aa69b0e
-timeCreated: 1482614961
+timeCreated: 1482617941
 licenseType: Free
 TextureImporter:
   fileIDToRecycleName:
-    21300000: Purple Fish_0
+    21300000: Purple Fish
     21300002: Purple Fish_1
   serializedVersion: 4
   mipmaps:
@@ -72,7 +72,7 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Purple Fish_0
+      name: Purple Fish
       rect:
         serializedVersion: 2
         x: 67
