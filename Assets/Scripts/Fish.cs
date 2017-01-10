@@ -7,19 +7,25 @@ public class Fish : MonoBehaviour {
 	// A la Boids model https://en.wikipedia.org/wiki/Boids
 	public static float MAX_SPEED = 10f;
 	public static float STEER_CONST = 0.006f;
+	public static float ESCAPE_CONST = 0.006f;
 
 	public static float COHERE_WEIGHT = (3f);
 	public static float ALIGN_WEIGHT = (2f);
 	public static float SEPERATE_WEIGHT = (4.5f);
+	public static float ESCAPE_WEIGHT = (25f);
 	public static float SEPERATION_RADIUS = 3f;
 	// Temp radius, used for finding neighbors
 	// will be replaced by K Nearest Neighbors implementation
 	public static float TEMP_RADIUS = 15f;
+	public static float PREDATION_RADIUS = 10f;
 
 	// Fish width and fish height, useful for figuring out
 	// if a fish is about to go out of bounds.
 	public static float FISH_WIDTH = 1.125f;
 	public static float FISH_HEIGHT = 0.825f;
+	// Background width and background height is useful for deterring from walls
+	public static float BACKGROUND_HALF_WIDTH = 50f;
+	public static float BACKGROUND_HALF_HEIGHT = 28.125f;
 
 	// Use this for initialization
 	void Start () {
@@ -34,10 +40,13 @@ public class Fish : MonoBehaviour {
 		// Will be changed to KNN.
 		List<Fish> neighbors = new List<Fish> ();
 		FindNeighbors (neighbors);
+		//Parallel to ab0ove for finding sharks.
+		List<Shark> predators = new List<Shark> ();
+		FindPredators (predators);
 
 		//Add modifier to the velocity.
 		//Modifier is determined by the Flock function. 
-		Vector2 modifier = Flock(neighbors);
+		Vector2 modifier = Flock(neighbors) + Escape(predators) * ESCAPE_WEIGHT;
 		Vector2 prepVelocity = this.GetComponent<Rigidbody2D>().velocity + modifier;
 		//Limit speed of fish if necessary
 		this.GetComponent<Rigidbody2D>().velocity = Vector2.ClampMagnitude(prepVelocity,MAX_SPEED);
@@ -95,22 +104,44 @@ public class Fish : MonoBehaviour {
 	string OutOfBounds(){
 		// Checks if the fish is currently out of bounds by using the dimensions and position of the 
 		// background image.
-		if (this.transform.position.x + FISH_WIDTH > 50){
+		if (this.transform.position.x + FISH_WIDTH > BACKGROUND_HALF_WIDTH){
 			return("Right");
 		}
-		else if (this.transform.position.x - FISH_WIDTH < -50){
+		else if (this.transform.position.x - FISH_WIDTH < -BACKGROUND_HALF_WIDTH){
 			return("Left");
 		}
-		else if (this.transform.position.y + FISH_HEIGHT > 28.125){
+		else if (this.transform.position.y + FISH_HEIGHT > BACKGROUND_HALF_HEIGHT){
 			return("Up");
 		}
-		else if (this.transform.position.y - FISH_HEIGHT < -28.125){
+		else if (this.transform.position.y - FISH_HEIGHT < -BACKGROUND_HALF_HEIGHT){
 			return("Down");
 		}
 		else {
 			return(null);
 		}
 	}
+
+	/* to be completed in next commit
+	string findFutureCollisionWall(){
+		int distance = 0;
+		string wall = null;
+
+		float x_vel = this.GetComponent<Rigidbody2D> ().velocity.x;
+		float y_vel = this.GetComponent<Rigidbody2D> ().velocity.y;
+		float x_pos = this.transform.position.x;
+		float y_pos = this.transform.position.y;
+
+		// if traveling between 0 and 90 degrees
+		if (x_vel > 0 && y_vel > 0){
+			
+		} else if (x_vel < 0 && y_vel > 0){ // 90 - 180
+			
+		} else if (x_vel < 0 && y_vel < 0){ // 180 - 270
+			
+		} else { // 270 - 360
+			
+		}
+	} */
 
 	void FindNeighbors(List<Fish> neighbors){
 		// Currently iterates through the entire list of fish within our scene
@@ -120,6 +151,16 @@ public class Fish : MonoBehaviour {
 			float distance = Vector3.Distance (this.transform.position, fish.transform.position);
 			if (distance != 0 && distance < TEMP_RADIUS){
 				neighbors.Add (fish.GetComponent<Fish>());
+			}
+		}
+	}
+
+	void FindPredators(List<Shark> predators){
+		// Works exactly the same way as FindNeighbors, except for sharks
+		foreach(GameObject shark in GameObject.FindGameObjectsWithTag("Shark")){
+			float distance = Vector3.Distance (this.transform.position, shark.transform.position);
+			if (distance != 0 && distance < TEMP_RADIUS){
+				predators.Add (shark.GetComponent<Shark>());
 			}
 		}
 	}
@@ -231,4 +272,56 @@ public class Fish : MonoBehaviour {
 
 		return(steer);
 	}
+
+	Vector2 Escape(List<Shark> predators){
+		// Functions nearly exactly similarly to Seperate
+		// Escape functions by finding the shark within its PREDATION_RADIUS
+		// If a shark is within its predation radius, we tell the fish to steer
+		// in the direction that is directly away from the shark
+
+		// Before telling the fish to steer away however, we add up all the "veer off" vectors
+		// scaled inversely by their distance from the fish. In other words, the closer a shark is
+		// the more influence they will have on the fish's movement.
+
+		// We then find the average, and tell the fish to steer in that direction.
+
+		Vector2 avoid = new Vector2 (0f, 0f);
+		int count = 0;
+
+		foreach (Shark shark in predators) {
+			float distance = Vector3.Distance (this.transform.position, shark.transform.position);
+			if (distance < PREDATION_RADIUS){
+				Vector2 veerOff = (Vector2)this.transform.position - (Vector2)shark.transform.position;
+				veerOff.Normalize ();
+				veerOff *= MAX_SPEED;
+				avoid += veerOff;
+				count++;
+			} 
+		}
+
+		if (count > 0 && avoid.magnitude > 0){
+			avoid /= count;
+			return (steerTo (avoid));
+		} 
+		else {
+			return avoid;
+		}
+	}
+
+	/* to be completed in next commit
+	float collisionDistanceTopWall(){
+		
+	}
+
+	float collisionDistanceRightWall(){
+		
+	}
+
+	float collisionDistanceBottomWall(){
+		
+	}
+
+	float collisionDistanceLeftWall(){
+		
+	} */
 }
