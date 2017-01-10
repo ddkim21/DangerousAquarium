@@ -6,14 +6,20 @@ public class Fish : MonoBehaviour {
 	// Set our weights for the flocking behavior function
 	// A la Boids model https://en.wikipedia.org/wiki/Boids
 	public static float MAX_SPEED = 10f;
-	public static float STEER_CONST = 0.003f;
+	public static float STEER_CONST = 0.006f;
 
-	public static float COHERE_WEIGHT = 0f;
-	public static float ALIGN_WEIGHT = 1f;
-	public static float SEPERATE_WEIGHT = 0f;
+	public static float COHERE_WEIGHT = (3f);
+	public static float ALIGN_WEIGHT = (2f);
+	public static float SEPERATE_WEIGHT = (4.5f);
+	public static float SEPERATION_RADIUS = 3f;
 	// Temp radius, used for finding neighbors
 	// will be replaced by K Nearest Neighbors implementation
 	public static float TEMP_RADIUS = 15f;
+
+	// Fish width and fish height, useful for figuring out
+	// if a fish is about to go out of bounds.
+	public static float FISH_WIDTH = 1.125f;
+	public static float FISH_HEIGHT = 0.825f;
 
 	// Use this for initialization
 	void Start () {
@@ -38,13 +44,11 @@ public class Fish : MonoBehaviour {
 
 		// Check if our fish is about to go out of bounds of the camera
 
-		/*
-		Temporarily commented out for the sake of testing flocking.
+
 		string outofbound = OutOfBounds ();
 		if (outofbound != null) { //If about to go out of bounds
 			deter (outofbound); // Deter the direction to keep fish inbounds
 		}
-		*/
 
 		// Orient sprite in direction of travel
 		Vector2 moveDirection = gameObject.GetComponent<Rigidbody2D>().velocity;
@@ -57,7 +61,7 @@ public class Fish : MonoBehaviour {
 
 	void setDirection() {
 		// Sets a random direction for the fish. Only used on initialization. 
-		Vector2 direction = new Vector2 (Random.Range(1f,4f), Random.Range(1f,4f));
+		Vector2 direction = new Vector2 (Random.Range(-4f,4f), Random.Range(-4f,4f));
 		this.GetComponent<Rigidbody2D>().velocity = direction;
 	}
 		
@@ -91,16 +95,16 @@ public class Fish : MonoBehaviour {
 	string OutOfBounds(){
 		// Checks if the fish is currently out of bounds by using the dimensions and position of the 
 		// background image.
-		if (this.transform.position.x + 2.25 > 50){
+		if (this.transform.position.x + FISH_WIDTH > 50){
 			return("Right");
 		}
-		else if (this.transform.position.x - 2.25 < -50){
+		else if (this.transform.position.x - FISH_WIDTH < -50){
 			return("Left");
 		}
-		else if (this.transform.position.y + 1.65 > 28.125){
+		else if (this.transform.position.y + FISH_HEIGHT > 28.125){
 			return("Up");
 		}
-		else if (this.transform.position.y - 1.65 < -28.125){
+		else if (this.transform.position.y - FISH_HEIGHT < -28.125){
 			return("Down");
 		}
 		else {
@@ -113,7 +117,7 @@ public class Fish : MonoBehaviour {
 		// and finds the ones within a certain radius of the fish
 		// and then appends them to the neighbors list if they are within the radius.
 		foreach(GameObject fish in GameObject.FindGameObjectsWithTag("Fish")){
-			float distance = Vector2.Distance (this.transform.position, fish.transform.position);
+			float distance = Vector3.Distance (this.transform.position, fish.transform.position);
 			if (distance != 0 && distance < TEMP_RADIUS){
 				neighbors.Add (fish.GetComponent<Fish>());
 			}
@@ -166,9 +170,37 @@ public class Fish : MonoBehaviour {
 	}
 
 	Vector2 Seperate(List<Fish> neighbors){
-		// will write later
+		// Seperate functions by finding the fish within its SEPERATION_RADIUS
+		// If a fish is within its seperation radius, we tell the fish to steer
+		// in the direction that is directly away from the fish within its seperation radius
 
-		return(new Vector2 (0f, 0f));
+		// Before telling the fish to steer away however, we add up all the "veer off" vectors
+		// inversely by their distance from the fish. In other words, the closer a fish is
+		// the more influence they will have on the primary fish's movement.
+
+		// We then find the average, and tell the fish to steer in that direction.
+
+		Vector2 avoid = new Vector2 (0f, 0f);
+		int count = 0;
+
+		foreach (Fish fish in neighbors) {
+			float distance = Vector3.Distance (this.transform.position, fish.transform.position);
+			if (distance < SEPERATION_RADIUS){
+				Vector2 veerOff = (Vector2)this.transform.position - (Vector2)fish.transform.position;
+				veerOff.Normalize ();
+				veerOff /= distance;
+				avoid += veerOff;
+				count++;
+			} 
+		}
+
+		if (count > 0 && avoid.magnitude > 0){
+			avoid /= count;
+			return (steerTo (avoid));
+		} 
+		else {
+			return avoid;
+		}
 	}
 		
 	Vector2 steerTo(Vector2 vel){
