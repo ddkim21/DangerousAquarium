@@ -6,11 +6,11 @@ public class Fish : MonoBehaviour {
 	// Set our weights for the flocking behavior function
 	// A la Boids model https://en.wikipedia.org/wiki/Boids
 	public static float MAX_SPEED = 10f;
-	public static float STEER_CONST = 0.03f;
+	public static float STEER_CONST = 0.003f;
 
-	public static float COHERE_WEIGHT = 1f;
-	public static float ALIGN_WEIGHT = (1f/3f);
-	public static float SEPERATE_WEIGHT = (1f/3f);
+	public static float COHERE_WEIGHT = 0f;
+	public static float ALIGN_WEIGHT = 1f;
+	public static float SEPERATE_WEIGHT = 0f;
 	// Temp radius, used for finding neighbors
 	// will be replaced by K Nearest Neighbors implementation
 	public static float TEMP_RADIUS = 15f;
@@ -57,7 +57,7 @@ public class Fish : MonoBehaviour {
 
 	void setDirection() {
 		// Sets a random direction for the fish. Only used on initialization. 
-		Vector2 direction = new Vector2 (Random.Range(3f,4f), Random.Range(3f,4f));
+		Vector2 direction = new Vector2 (Random.Range(1f,4f), Random.Range(1f,4f));
 		this.GetComponent<Rigidbody2D>().velocity = direction;
 	}
 		
@@ -126,8 +126,8 @@ public class Fish : MonoBehaviour {
 		// The influences of each are added to the current velocity of the fish
 		// also taking into account how we want to weight the influence of each.
 		Vector2 coherence = Cohere (neighbors) * COHERE_WEIGHT;
-		Vector2 seperation = Seperate(neighbors) * SEPERATE_WEIGHT;
 		Vector2 alignment = Align (neighbors) * ALIGN_WEIGHT;
+		Vector2 seperation = Seperate(neighbors) * SEPERATE_WEIGHT;
 
 		return(seperation + alignment + coherence);
 	}
@@ -144,7 +144,24 @@ public class Fish : MonoBehaviour {
 				center += (Vector2)fish.transform.position;
 			}
 			center /= neighbors.Count;
-			return(steerTo (center));
+			Vector2 current2Dpos = new Vector2 (this.transform.position.x, this.transform.position.y);
+			return(steerTo (center - current2Dpos)); // Pass vector of travel to get to center
+		}
+	}
+
+	Vector2 Align(List<Fish> neighbors){
+		// Align functions via finding the average velocity of all of a fish's neighbors
+		// and steering towards the average velocity of its neighbors
+		Vector2 average = new Vector2 (0f, 0f);
+
+		if (neighbors.Count == 0){
+			return average;
+		} else {
+			foreach (Fish fish in neighbors) {
+				average += fish.GetComponent<Rigidbody2D>().velocity;
+			}
+			average /= neighbors.Count;
+			return(steerTo (average));
 		}
 	}
 
@@ -153,46 +170,32 @@ public class Fish : MonoBehaviour {
 
 		return(new Vector2 (0f, 0f));
 	}
-
-	Vector2 Align(List<Fish> neighbors){
-		// will write later
-
-		return(new Vector2 (0f, 0f));
-	}
 		
-	Vector2 steerTo(Vector2 target){
+	Vector2 steerTo(Vector2 vel){
+		// Argument vel corresponds to the intended direction of travel, 
+		// or the direction of travel to "steer" towards.
+
 		// steer functions by utilizing the vector subtraction of
 		// the intended direction of travel and the current direction of travel.
 		Vector2 steer = new Vector2 (0f, 0f); // declare steer. 
 
-		// First we find a vector pointing from the position to the target. 
-		// This direction is stored in the toTarget vector.
-		Vector2 curr2Dpos = new Vector2 (this.transform.position.x, this.transform.position.y);
-		Vector2 toTarget = target - curr2Dpos;
+		// Change vel to Unit Vector
+		vel.Normalize ();
 
-		// Then we find the distance to the target. This is utilized to modify the amount of 
-		// steer towards the direction. If the target is further away from the object, then
-		// the object will "steer faster" towards the target, i.e. a larger modifier is added.
-		float distance = toTarget.magnitude;
+		// Scale the vel vector magnitude to MAX_SPEED. 
+		// This allows the steer modifier to not "slow down" the fish
+		vel *= MAX_SPEED;
 
-		if (distance > 0f){
-			// Change toTarget to Unit Vector
-			toTarget.Normalize ();
-
-			// Scale the toTarget vector magnitude to MAX_SPEED. 
-			// This allows the steer modifier to not "slow down" the fish
-			toTarget *= MAX_SPEED;
-
-			// Steering velocity is toTarget - current velocity
-			// note by adding the steering velocity to the original velocity
-			// we get steering velocity + original velocity
-			// = frac(toTargetVelocity - original velocity) + original velocity
-			// which in isolation, added over time, will eventually = toTargetVelocity
-			steer = toTarget - this.GetComponent<Rigidbody2D>().velocity;
-			// Set magnitude of steer to be no greater than STEER_CONST
-			// which allows for a smoother (albeit slower) turns 
-			steer = Vector2.ClampMagnitude(steer, STEER_CONST);
-		}
+		// Steering velocity is vel - current velocity
+		// note by adding the steering velocity to the original velocity
+		// we get steering velocity + original velocity
+		// = frac(vel - original velocity) + original velocity
+		// which in isolation, added over time, will eventually
+		// be in the direction of vel
+		steer = vel - this.GetComponent<Rigidbody2D>().velocity;
+		// Set magnitude of steer to be no greater than STEER_CONST
+		// which allows for a smoother (albeit slower) turns 
+		steer = Vector2.ClampMagnitude(steer, STEER_CONST);
 
 		return(steer);
 	}
