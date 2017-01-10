@@ -3,91 +3,197 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class Fish : MonoBehaviour {
+	// Set our weights for the flocking behavior function
+	// A la Boids model https://en.wikipedia.org/wiki/Boids
+	public static float MAX_SPEED = 10f;
+	public static float STEER_CONST = 0.03f;
 
-	private int roamTime = 0;
+	public static float COHERE_WEIGHT = 1f;
+	public static float ALIGN_WEIGHT = (1f/3f);
+	public static float SEPERATE_WEIGHT = (1f/3f);
+	// Temp radius, used for finding neighbors
+	// will be replaced by K Nearest Neighbors implementation
+	public static float TEMP_RADIUS = 15f;
 
 	// Use this for initialization
 	void Start () {
-		this.GetComponent<Rigidbody2D>().freezeRotation = true;
+		// Start off with a slightly random direction
+		setDirection ();
 	}
 	
 	// Update is called once per frame
 	void Update () {
-	// Check if our fish is about to go out of bounds of the camera
-		if (OutOfBounds("Right")){
-			Deter("Right"); //If about to go out of bounds, slightly deter the direction
-		}							 // To prevent the fish from doing so
-		if (OutOfBounds("Left")){
-			Deter("Left");
+		// Create and populate list of neighbors
+		// or fish within the radius of the current fish.
+		// Will be changed to KNN.
+		List<Fish> neighbors = new List<Fish> ();
+		FindNeighbors (neighbors);
+
+		//Add modifier to the velocity.
+		//Modifier is determined by the Flock function. 
+		Vector2 modifier = Flock(neighbors);
+		Vector2 prepVelocity = this.GetComponent<Rigidbody2D>().velocity + modifier;
+		//Limit speed of fish if necessary
+		this.GetComponent<Rigidbody2D>().velocity = Vector2.ClampMagnitude(prepVelocity,MAX_SPEED);
+
+		// Check if our fish is about to go out of bounds of the camera
+
+		/*
+		Temporarily commented out for the sake of testing flocking.
+		string outofbound = OutOfBounds ();
+		if (outofbound != null) { //If about to go out of bounds
+			deter (outofbound); // Deter the direction to keep fish inbounds
 		}
-		if (OutOfBounds("Up")){
-			Deter("Up");
-		}
-		if (OutOfBounds("Down")){
-			Deter("Down");
-		}
-		// Otherwise, check if the roamtime of the fish is down, if so, then change direction
-		else if (roamTime <= 0){
-			SetTime();
-			SetDirection();
-		}
-		else { // Otherwise, count down on the roamtime for the given direction
-			roamTime--;
+		*/
+
+		// Orient sprite in direction of travel
+		Vector2 moveDirection = gameObject.GetComponent<Rigidbody2D>().velocity;
+
+		if (moveDirection != Vector2.zero) {
+			float angle = Mathf.Atan2(moveDirection.y, moveDirection.x) * Mathf.Rad2Deg;
+			transform.rotation = Quaternion.AngleAxis(angle, Vector3.forward);
 		}
 	}
 
-	void SetTime() {
-		roamTime = Random.Range(30,360);
-	}
-
-	void SetDirection() {
-		Vector2 direction = new Vector2 (Random.Range(-10f,10f), Random.Range(-10f,10f));
+	void setDirection() {
+		// Sets a random direction for the fish. Only used on initialization. 
+		Vector2 direction = new Vector2 (Random.Range(3f,4f), Random.Range(3f,4f));
 		this.GetComponent<Rigidbody2D>().velocity = direction;
 	}
-
-
-
-	void Deter(string side){
+		
+	void deter(string side){
+		// Prevent the fish from escaping the aquarium.
+		// Keep the component of the velocity that does not send the fish out of the aquarium
+		// and change the component of the velocity that does send the fish out
+		// by choosing a random float between .1 and 2 (absolute value) in the opposite direction
 		if (side == "Up"){
 			Vector2 deter = new Vector2 (this.GetComponent<Rigidbody2D>().velocity.x,
 															(-1) * Random.Range(0.1f,2f));
 			this.GetComponent<Rigidbody2D>().velocity = deter;
-			roamTime += 10;
 		}
 		else if (side == "Down"){
 			Vector2 deter = new Vector2 (this.GetComponent<Rigidbody2D>().velocity.x,
 															Random.Range(0.1f,2f));
 			this.GetComponent<Rigidbody2D>().velocity = deter;
-			roamTime += 10;
 		}
 		else if (side == "Left"){
 			Vector2 deter = new Vector2 (Random.Range(0.1f,2f), 
 															this.GetComponent<Rigidbody2D>().velocity.y);
 			this.GetComponent<Rigidbody2D>().velocity = deter;
-			roamTime += 10;
 		}
 		else {
 			Vector2 deter = new Vector2 ((-1) * Random.Range(0.1f,2f), 
 															this.GetComponent<Rigidbody2D>().velocity.y);
 			this.GetComponent<Rigidbody2D>().velocity = deter;
-			roamTime += 10;
 		}
 	}
 
-	bool OutOfBounds(string side){
-		if (side == "Right"){
-			return(this.transform.position.x + 2.25 > 50);
+	string OutOfBounds(){
+		// Checks if the fish is currently out of bounds by using the dimensions and position of the 
+		// background image.
+		if (this.transform.position.x + 2.25 > 50){
+			return("Right");
 		}
-		else if (side == "Left"){
-			return(this.transform.position.x - 2.25 < -50);
+		else if (this.transform.position.x - 2.25 < -50){
+			return("Left");
 		}
-		else if (side == "Up"){
-			return(this.transform.position.y + 1.65 > 28.125);
+		else if (this.transform.position.y + 1.65 > 28.125){
+			return("Up");
+		}
+		else if (this.transform.position.y - 1.65 < -28.125){
+			return("Down");
 		}
 		else {
-			return(this.transform.position.y - 1.65 < -28.125);
+			return(null);
 		}
 	}
 
+	void FindNeighbors(List<Fish> neighbors){
+		// Currently iterates through the entire list of fish within our scene
+		// and finds the ones within a certain radius of the fish
+		// and then appends them to the neighbors list if they are within the radius.
+		foreach(GameObject fish in GameObject.FindGameObjectsWithTag("Fish")){
+			float distance = Vector2.Distance (this.transform.position, fish.transform.position);
+			if (distance != 0 && distance < TEMP_RADIUS){
+				neighbors.Add (fish.GetComponent<Fish>());
+			}
+		}
+	}
 
+	Vector2 Flock(List<Fish> neighbors){
+		// Boids governs the movement of a fish based off of three rules:
+		// coherence, seperation, and alignment.
+		// The influences of each are added to the current velocity of the fish
+		// also taking into account how we want to weight the influence of each.
+		Vector2 coherence = Cohere (neighbors) * COHERE_WEIGHT;
+		Vector2 seperation = Seperate(neighbors) * SEPERATE_WEIGHT;
+		Vector2 alignment = Align (neighbors) * ALIGN_WEIGHT;
+
+		return(seperation + alignment + coherence);
+	}
+
+	Vector2 Cohere(List<Fish> neighbors){
+		// Cohere means to steer towards the center of your neighbors
+
+		Vector2 center = new Vector2 (0f, 0f);
+	
+		if (neighbors.Count == 0) {
+			return center;
+		} else {
+			foreach (Fish fish in neighbors) {
+				center += (Vector2)fish.transform.position;
+			}
+			center /= neighbors.Count;
+			return(steerTo (center));
+		}
+	}
+
+	Vector2 Seperate(List<Fish> neighbors){
+		// will write later
+
+		return(new Vector2 (0f, 0f));
+	}
+
+	Vector2 Align(List<Fish> neighbors){
+		// will write later
+
+		return(new Vector2 (0f, 0f));
+	}
+		
+	Vector2 steerTo(Vector2 target){
+		// steer functions by utilizing the vector subtraction of
+		// the intended direction of travel and the current direction of travel.
+		Vector2 steer = new Vector2 (0f, 0f); // declare steer. 
+
+		// First we find a vector pointing from the position to the target. 
+		// This direction is stored in the toTarget vector.
+		Vector2 curr2Dpos = new Vector2 (this.transform.position.x, this.transform.position.y);
+		Vector2 toTarget = target - curr2Dpos;
+
+		// Then we find the distance to the target. This is utilized to modify the amount of 
+		// steer towards the direction. If the target is further away from the object, then
+		// the object will "steer faster" towards the target, i.e. a larger modifier is added.
+		float distance = toTarget.magnitude;
+
+		if (distance > 0f){
+			// Change toTarget to Unit Vector
+			toTarget.Normalize ();
+
+			// Scale the toTarget vector magnitude to MAX_SPEED. 
+			// This allows the steer modifier to not "slow down" the fish
+			toTarget *= MAX_SPEED;
+
+			// Steering velocity is toTarget - current velocity
+			// note by adding the steering velocity to the original velocity
+			// we get steering velocity + original velocity
+			// = frac(toTargetVelocity - original velocity) + original velocity
+			// which in isolation, added over time, will eventually = toTargetVelocity
+			steer = toTarget - this.GetComponent<Rigidbody2D>().velocity;
+			// Set magnitude of steer to be no greater than STEER_CONST
+			// which allows for a smoother (albeit slower) turns 
+			steer = Vector2.ClampMagnitude(steer, STEER_CONST);
+		}
+
+		return(steer);
+	}
 }

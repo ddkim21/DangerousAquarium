@@ -3,7 +3,10 @@
 --- !u!78 &1
 TagManager:
   serializedVersion: 2
-  tags: []
+  tags:
+  - Right Test Fish
+  - Left Test Fish
+  - Fish
   layers:
   - Default
   - TransparentFX
