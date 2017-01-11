@@ -7,7 +7,9 @@ public class Shark : MonoBehaviour {
 	public static float STEER_CONST = 0.06f;
 
 	public static float COHERE_WEIGHT = (3f);
+	public static float SEPERATE_WEIGHT = 6f;
 	public static float TEMP_RADIUS = 15f;
+	public static float SEPERATION_RADIUS = 6f;
 
 	public static float SHARK_WIDTH = 3.0f;
 	public static float SHARK_HEIGHT = 2.05f;
@@ -22,11 +24,13 @@ public class Shark : MonoBehaviour {
 	void Update () {
 		List<Fish> prey = new List<Fish> ();
 		FindPrey (prey);
-		Debug.Log (prey.Count);
+
+		List<Shark> neighbors = new List<Shark> ();
+		FindNeighbors (neighbors);
 
 		//Add modifier to velocity.
 		//Modifier is determined by the hunt function.
-		Vector2 modifier = Hunt(prey);
+		Vector2 modifier = Hunt(prey, neighbors);
 		Vector2 prepVelocity = this.GetComponent<Rigidbody2D>().velocity + modifier;
 		//Limit speed of shark if necessary
 		this.GetComponent<Rigidbody2D>().velocity = Vector2.ClampMagnitude(prepVelocity,MAX_SPEED);
@@ -112,8 +116,21 @@ public class Shark : MonoBehaviour {
 		}
 	}
 
-	Vector2 Hunt(List<Fish> prey){
-		Vector2 coherence = Cohere (prey) * COHERE_WEIGHT;
+	void FindNeighbors(List<Shark> neighbors){
+		// Currently iterates through the entire list of shark within our scene
+		// and finds the ones within a certain radius of the shark
+		// and then appends them to the neighbors list if they are within the radius.
+		foreach(GameObject shark in GameObject.FindGameObjectsWithTag("Shark")){
+			float distance = Vector3.Distance (this.transform.position, shark.transform.position);
+			if (distance != 0 && distance < TEMP_RADIUS){
+				neighbors.Add (shark.GetComponent<Shark>());
+			}
+		}
+	}
+
+	Vector2 Hunt(List<Fish> prey, List<Shark> neighbors){
+		Vector2 coherence = Cohere (prey) * COHERE_WEIGHT + 
+			Seperate(neighbors) * SEPERATE_WEIGHT;
 		return (coherence);
 	}
 
@@ -132,6 +149,32 @@ public class Shark : MonoBehaviour {
 			center /= prey.Count;
 			Vector2 current2Dpos = new Vector2 (this.transform.position.x, this.transform.position.y);
 			return(steerTo (center - current2Dpos)); // Pass vector of travel to get to center
+		}
+	}
+
+	Vector2 Seperate(List<Shark> neighbors){
+		// Identical to fish seperate, except seperating with other sharks
+
+		Vector2 avoid = new Vector2 (0f, 0f);
+		int count = 0;
+
+		foreach (Shark shark in neighbors) {
+			float distance = Vector3.Distance (this.transform.position, shark.transform.position);
+			if (distance < SEPERATION_RADIUS){
+				Vector2 veerOff = (Vector2)this.transform.position - (Vector2)shark.transform.position;
+				veerOff.Normalize ();
+				veerOff /= distance;
+				avoid += veerOff;
+				count++;
+			} 
+		}
+
+		if (count > 0 && avoid.magnitude > 0){
+			avoid /= count;
+			return (steerTo (avoid));
+		} 
+		else {
+			return avoid;
 		}
 	}
 

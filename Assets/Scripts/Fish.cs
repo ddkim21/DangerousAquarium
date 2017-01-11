@@ -9,10 +9,11 @@ public class Fish : MonoBehaviour {
 	public static float STEER_CONST = 0.006f;
 	public static float ESCAPE_CONST = 0.006f;
 
-	public static float COHERE_WEIGHT = (3f);
-	public static float ALIGN_WEIGHT = (2f);
-	public static float SEPERATE_WEIGHT = (4.5f);
-	public static float ESCAPE_WEIGHT = (25f);
+	public static float COHERE_WEIGHT = (4f);
+	public static float ALIGN_WEIGHT = (4f);
+	public static float SEPERATE_WEIGHT = (6f);
+	public static float ESCAPE_WEIGHT = (27.5f);
+	public static float WALL_WEIGHT = 12.5f;
 	public static float SEPERATION_RADIUS = 3f;
 	// Temp radius, used for finding neighbors
 	// will be replaced by K Nearest Neighbors implementation
@@ -27,6 +28,15 @@ public class Fish : MonoBehaviour {
 	public static float BACKGROUND_HALF_WIDTH = 50f;
 	public static float BACKGROUND_HALF_HEIGHT = 28.125f;
 
+	// Private Frame Counter for Corner situation
+	// Corner situation is a situation where the shark has a fish cornered.
+	// Normally the forces applied would trap the fish in the corner
+	// and force the fish to spin in circles.
+	// Though the application of steering away from walls dampens the frequency in 
+	// which this happens, the issue still exists. I have tried other steering methods,
+	// and none seem to maintain the type of swimming behavior I desire.
+	private int CORNER_ESCAPE_COUNTER = 0;
+
 	// Use this for initialization
 	void Start () {
 		// Start off with a slightly random direction
@@ -35,30 +45,59 @@ public class Fish : MonoBehaviour {
 	
 	// Update is called once per frame
 	void Update () {
+		// First check if we are still running from a corner
+		if (CORNER_ESCAPE_COUNTER > 0){
+			CORNER_ESCAPE_COUNTER--;
+			return;
+		}
+
+		// Before executing any of the below functions, first check if we are 
+		// about to swim out of the bounds of the aquarium.
+		string outofbound = OutOfBounds ();
+		if (outofbound != null) { //If about to go out of bounds
+			deter (outofbound); // Deter the direction to keep fish inbounds
+			setOrientation();
+			return;
+		}
+
 		// Create and populate list of neighbors
 		// or fish within the radius of the current fish.
 		// Will be changed to KNN.
 		List<Fish> neighbors = new List<Fish> ();
 		FindNeighbors (neighbors);
-		//Parallel to ab0ove for finding sharks.
+		//Parallel to above for finding sharks.
 		List<Shark> predators = new List<Shark> ();
 		FindPredators (predators);
 
+		//Before steering based on boids and predators, check if we are in a corner situation
+		string corner = Cornered(predators); // returns null or corner name
+		if (corner != null){
+			RunFromCorner (corner);
+			Debug.Log ("Running from corner: " + corner);
+			setOrientation ();
+			return;
+		}
+
 		//Add modifier to the velocity.
-		//Modifier is determined by the Flock function. 
+		//Modifier is determined by the Flock function and Escape function. 
 		Vector2 modifier = Flock(neighbors) + Escape(predators) * ESCAPE_WEIGHT;
+		//Also include potential wall buffers
+		modifier += steerAwayFromWalls() * WALL_WEIGHT;
 		Vector2 prepVelocity = this.GetComponent<Rigidbody2D>().velocity + modifier;
 		//Limit speed of fish if necessary
 		this.GetComponent<Rigidbody2D>().velocity = Vector2.ClampMagnitude(prepVelocity,MAX_SPEED);
 
-		// Check if our fish is about to go out of bounds of the camera
+		setOrientation ();
+		// END UPDATE
+	}
 
+	void setDirection() {
+		// Sets a random direction for the fish. Only used on initialization. 
+		Vector2 direction = new Vector2 (Random.Range(-4f,4f), Random.Range(-4f,4f));
+		this.GetComponent<Rigidbody2D>().velocity = direction;
+	}
 
-		string outofbound = OutOfBounds ();
-		if (outofbound != null) { //If about to go out of bounds
-			deter (outofbound); // Deter the direction to keep fish inbounds
-		}
-
+	void setOrientation() {
 		// Orient sprite in direction of travel
 		Vector2 moveDirection = gameObject.GetComponent<Rigidbody2D>().velocity;
 
@@ -68,37 +107,29 @@ public class Fish : MonoBehaviour {
 		}
 	}
 
-	void setDirection() {
-		// Sets a random direction for the fish. Only used on initialization. 
-		Vector2 direction = new Vector2 (Random.Range(-4f,4f), Random.Range(-4f,4f));
-		this.GetComponent<Rigidbody2D>().velocity = direction;
-	}
-		
 	void deter(string side){
 		// Prevent the fish from escaping the aquarium.
 		// Keep the component of the velocity that does not send the fish out of the aquarium
 		// and change the component of the velocity that does send the fish out
 		// by choosing a random float between .1 and 2 (absolute value) in the opposite direction
+		Vector2 deter = new Vector2 (0f,0f);
 		if (side == "Up"){
-			Vector2 deter = new Vector2 (this.GetComponent<Rigidbody2D>().velocity.x,
+			deter = new Vector2 (this.GetComponent<Rigidbody2D>().velocity.x,
 															(-1) * Random.Range(0.1f,2f));
-			this.GetComponent<Rigidbody2D>().velocity = deter;
 		}
 		else if (side == "Down"){
-			Vector2 deter = new Vector2 (this.GetComponent<Rigidbody2D>().velocity.x,
+			deter = new Vector2 (this.GetComponent<Rigidbody2D>().velocity.x,
 															Random.Range(0.1f,2f));
-			this.GetComponent<Rigidbody2D>().velocity = deter;
 		}
 		else if (side == "Left"){
-			Vector2 deter = new Vector2 (Random.Range(0.1f,2f), 
-															this.GetComponent<Rigidbody2D>().velocity.y);
-			this.GetComponent<Rigidbody2D>().velocity = deter;
+			deter = new Vector2 (Random.Range(0.1f,2f),
+				this.GetComponent<Rigidbody2D>().velocity.y);
 		}
 		else {
-			Vector2 deter = new Vector2 ((-1) * Random.Range(0.1f,2f), 
-															this.GetComponent<Rigidbody2D>().velocity.y);
-			this.GetComponent<Rigidbody2D>().velocity = deter;
+			deter = new Vector2 ((-1) * Random.Range(0.1f,2f),
+				this.GetComponent<Rigidbody2D>().velocity.y);
 		}
+		this.GetComponent<Rigidbody2D>().velocity = deter;
 	}
 
 	string OutOfBounds(){
@@ -121,27 +152,140 @@ public class Fish : MonoBehaviour {
 		}
 	}
 
-	/* to be completed in next commit
-	string findFutureCollisionWall(){
-		int distance = 0;
-		string wall = null;
+	string Cornered(List<Shark> predators){
+		float xpos = this.transform.position.x;
+		float ypos = this.transform.position.y;
+		float distanceToNearestShark = float.MaxValue;
+		string corner = null;
+		float wallBuffer = 2.5f;
+		float sharkBuffer = 5f;
 
-		float x_vel = this.GetComponent<Rigidbody2D> ().velocity.x;
-		float y_vel = this.GetComponent<Rigidbody2D> ().velocity.y;
-		float x_pos = this.transform.position.x;
-		float y_pos = this.transform.position.y;
-
-		// if traveling between 0 and 90 degrees
-		if (x_vel > 0 && y_vel > 0){
-			
-		} else if (x_vel < 0 && y_vel > 0){ // 90 - 180
-			
-		} else if (x_vel < 0 && y_vel < 0){ // 180 - 270
-			
-		} else { // 270 - 360
-			
+		// First check if we are in a corner.
+		// This is the potentially cheaper operation (always constant)
+		// and will allow us to forgo the shark distance check if false
+		if (xpos + FISH_WIDTH > BACKGROUND_HALF_WIDTH - wallBuffer &&
+		    ypos + FISH_HEIGHT > BACKGROUND_HALF_HEIGHT - wallBuffer) {
+			corner = "Top Right";
+		} else if (xpos - FISH_WIDTH < -BACKGROUND_HALF_WIDTH + wallBuffer &&
+		           ypos + FISH_HEIGHT > BACKGROUND_HALF_HEIGHT - wallBuffer) {
+			corner = "Top Left";
+		} else if (xpos - FISH_WIDTH < -BACKGROUND_HALF_WIDTH + wallBuffer &&
+		           ypos - FISH_HEIGHT < -BACKGROUND_HALF_HEIGHT + wallBuffer) {
+			corner = "Bottom Left";
+		} else if (xpos + FISH_WIDTH > BACKGROUND_HALF_WIDTH - wallBuffer &&
+		         ypos - FISH_HEIGHT < -BACKGROUND_HALF_HEIGHT + wallBuffer) {
+			corner = "Bottom Right";
 		}
-	} */
+
+		if (corner != null){
+			foreach(Shark shark in predators){
+				float distance = Vector2.Distance ((Vector2)this.transform.position,
+					(Vector2)shark.transform.position);
+				if (distance < distanceToNearestShark)
+					distanceToNearestShark = distance;
+			}
+		}
+
+		if (distanceToNearestShark < sharkBuffer)
+			return corner;
+		else
+			return null;
+	}
+
+	void RunFromCorner(string corner){
+		Vector2 runaway = new Vector2 (0f, 0f);
+		float cointoss = Random.Range (-1f, 1f);
+		if (corner == null){
+			return;
+		}
+		else if (corner == "Top Right"){
+			if (cointoss >= 0){
+				runaway = new Vector2 (Random.Range (-4f, -3f), Random.Range (-1f, 0f));
+			}
+			else {
+				runaway = new Vector2 (Random.Range (-1f, 0f), Random.Range (-4f, -3f));
+			}
+		}
+		else if (corner == "Top Left"){
+			if (cointoss >= 0){
+				runaway = new Vector2 (Random.Range (3f, 4f), Random.Range (-1f, 0f));
+			}
+			else {
+				runaway = new Vector2 (Random.Range (0f, 1f), Random.Range (-4f, -3f));
+			}		
+		}
+		else if (corner == "Bottom Left"){
+			if (cointoss >= 0){
+				runaway = new Vector2 (Random.Range (3f, 4f), Random.Range (0f, 1f));
+			}
+			else {
+				runaway = new Vector2 (Random.Range (0f, 1f), Random.Range (3f, 4f));
+			}
+		}
+		else {
+			if (cointoss >= 0){
+				runaway = new Vector2 (Random.Range (-4f, -3f), Random.Range (0f, 1f));
+			}
+			else {
+				runaway = new Vector2 (Random.Range (-1f, 0f), Random.Range (3f, 4f));
+			}
+		}
+		CORNER_ESCAPE_COUNTER = 30;
+		runaway.Normalize ();
+		runaway *= MAX_SPEED * (1f/2f);
+		this.GetComponent<Rigidbody2D>().velocity = runaway;
+	}
+
+	Vector2 steerAwayFromWalls() {
+		// Steers away from walls (since bouncing off of walls at all times gets old)
+		// Utilizes a buffer between the wall and fish in order to decide when to start steering
+		// away from the wall. The closer the fish is to the wall, the larger the magnitude of 
+		// the deterrence direction on the desired vector of travel.
+
+		// The desired vector of travel is calculated via maintaining the direction (x or y) 
+		// and magnitude of the non deterrence direction of travel (x if the fish is about 
+		// to hit the bottom or top walls), and scaling the deterrence direction linearly based 
+		// on the distance to the wall itself and in the opposite direction. 
+		float buffer = 5f;
+		float constantFactor = 5f;
+
+		Vector2 steer = new Vector2 (0f, 0f);
+
+		if (this.transform.position.x + FISH_WIDTH > BACKGROUND_HALF_WIDTH - buffer){
+			// Near the right wall
+			float distanceToWall = BACKGROUND_HALF_WIDTH - (this.transform.position.x + FISH_WIDTH);
+			float desiredXVel = -MAX_SPEED * (buffer - distanceToWall) / buffer *  constantFactor;
+			Vector2 desired = new Vector2 (desiredXVel, this.GetComponent<Rigidbody2D> ().velocity.y);
+			steer = desired - this.GetComponent<Rigidbody2D> ().velocity;
+			steer = Vector2.ClampMagnitude(steer, STEER_CONST);
+		}
+		else if (this.transform.position.x - FISH_WIDTH < -BACKGROUND_HALF_WIDTH + buffer){
+			// Near the left wall
+			float distanceToWall = (this.transform.position.x - FISH_WIDTH) - BACKGROUND_HALF_WIDTH;
+			float desiredXVel = MAX_SPEED * (buffer - distanceToWall) / buffer * constantFactor;
+			Vector2 desired = new Vector2 (desiredXVel, this.GetComponent<Rigidbody2D> ().velocity.y);
+			steer = desired - this.GetComponent<Rigidbody2D> ().velocity;
+			steer = Vector2.ClampMagnitude(steer, STEER_CONST);
+		}
+		else if (this.transform.position.y + FISH_HEIGHT > BACKGROUND_HALF_HEIGHT - buffer){
+			// Near the top wall
+			float distanceToWall = BACKGROUND_HALF_HEIGHT - (this.transform.position.y + FISH_HEIGHT);
+			float desiredYvel = -MAX_SPEED * (buffer - distanceToWall) / buffer * constantFactor;
+			Vector2 desired = new Vector2 (this.GetComponent<Rigidbody2D> ().velocity.x, desiredYvel);
+			steer = desired - this.GetComponent<Rigidbody2D> ().velocity;
+			steer = Vector2.ClampMagnitude(steer, STEER_CONST);
+		}
+		else if (this.transform.position.y - FISH_HEIGHT < -BACKGROUND_HALF_HEIGHT + buffer){
+			// Near the bottom wall
+			float distanceToWall = (this.transform.position.y - FISH_HEIGHT) - BACKGROUND_HALF_HEIGHT;
+			float desiredYvel = MAX_SPEED * (buffer - distanceToWall) / buffer * constantFactor;
+			Vector2 desired = new Vector2 (this.GetComponent<Rigidbody2D> ().velocity.x, desiredYvel);
+			steer = desired - this.GetComponent<Rigidbody2D> ().velocity;
+			steer = Vector2.ClampMagnitude(steer, STEER_CONST);
+		}
+
+		return(steer);
+	}
 
 	void FindNeighbors(List<Fish> neighbors){
 		// Currently iterates through the entire list of fish within our scene
@@ -280,7 +424,7 @@ public class Fish : MonoBehaviour {
 		// in the direction that is directly away from the shark
 
 		// Before telling the fish to steer away however, we add up all the "veer off" vectors
-		// scaled inversely by their distance from the fish. In other words, the closer a shark is
+		// scaled inversely by their distance from the sharks. In other words, the closer a shark is
 		// the more influence they will have on the fish's movement.
 
 		// We then find the average, and tell the fish to steer in that direction.
@@ -293,7 +437,7 @@ public class Fish : MonoBehaviour {
 			if (distance < PREDATION_RADIUS){
 				Vector2 veerOff = (Vector2)this.transform.position - (Vector2)shark.transform.position;
 				veerOff.Normalize ();
-				veerOff *= MAX_SPEED;
+				veerOff *= (1/distance);
 				avoid += veerOff;
 				count++;
 			} 
@@ -307,21 +451,4 @@ public class Fish : MonoBehaviour {
 			return avoid;
 		}
 	}
-
-	/* to be completed in next commit
-	float collisionDistanceTopWall(){
-		
-	}
-
-	float collisionDistanceRightWall(){
-		
-	}
-
-	float collisionDistanceBottomWall(){
-		
-	}
-
-	float collisionDistanceLeftWall(){
-		
-	} */
 }
