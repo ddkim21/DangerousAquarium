@@ -73,7 +73,6 @@ public class Fish : MonoBehaviour {
 		string corner = Cornered(predators); // returns null or corner name
 		if (corner != null){
 			RunFromCorner (corner);
-			Debug.Log ("Running from corner: " + corner);
 			setOrientation ();
 			return;
 		}
