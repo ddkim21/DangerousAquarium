@@ -1,14 +1,15 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
-public class Shark : MonoBehaviour {
+public class Shark : Agent {
 	public static float MAX_SPEED = 7f;
 	public static float STEER_CONST = 0.06f;
 
 	public static float COHERE_WEIGHT = (3f);
 	public static float SEPERATE_WEIGHT = 6f;
-	public static float WANDER_WEIGHT = 2f;
+	public static float WANDER_WEIGHT = 1f;
 	public static float TEMP_RADIUS = 15f;
 	public static float SEPERATION_RADIUS = 6f;
 
@@ -20,6 +21,9 @@ public class Shark : MonoBehaviour {
 	// Background width and background height is useful for deterring from walls
 	public static float BACKGROUND_HALF_WIDTH = 50f;
 	public static float BACKGROUND_HALF_HEIGHT = 28.125f;
+
+	//Lastly, our count of fish in order to keep track of the number of sharks
+	public static int SHARK_COUNT = 0;
 
 	public Sprite biteSprite;
 	public GameObject blood;
@@ -36,8 +40,18 @@ public class Shark : MonoBehaviour {
 	private int SharkWanderHelper = 0;
 	private Vector2 WanderDirection = new Vector2();
 
+	// Global ID and instance ID, since instantiated objects have same IDs
+	private static int _globalID = 0;
+	private int _ID = 0;
+
+	void Awake (){
+		_ID = _globalID;
+		_globalID++;
+	}
+
 	// Use this for initialization
 	void Start () {
+		SHARK_COUNT++;
 		spriteRenderer = this.GetComponent<SpriteRenderer> ();
 		normalSprite = spriteRenderer.sprite;
 		setDirection ();
@@ -45,6 +59,9 @@ public class Shark : MonoBehaviour {
 
 	// Update is called once per frame
 	void Update () {
+		// AquariumManager.sharkGridUpdate (this);
+		// AquariumManager.sharkDictUpdate(this);
+
 		// Check if our shark is about to go out of bounds of the camera
 		string outofbound = OutOfBounds ();
 		if (outofbound != null) { //If about to go out of bounds
@@ -70,8 +87,9 @@ public class Shark : MonoBehaviour {
 			return;
 		}
 			
-		List<Fish> prey = new List<Fish> ();
+		List<Fish> prey = new List<Fish>();
 		FindPrey (prey);
+
 		PreyBiteReady (prey);
 
 		//Add modifier to velocity.
@@ -177,12 +195,43 @@ public class Shark : MonoBehaviour {
 		// Currently iterates through the entire list of fish within our scene
 		// and finds the ones within a certain radius of the fish
 		// and then appends them to the neighbors list if they are within the radius.
+
+		/*
+		prey.AddRange (AquariumManager.fishGrid [x_coord, y_coord]);
+
+		if (x_coord > 0)
+			prey.AddRange (AquariumManager.fishGrid [x_coord - 1, y_coord]);
+		if (x_coord < (AquariumManager.HORIZONTAL_SQUARE_COUNT - 1))
+			prey.AddRange (AquariumManager.fishGrid [x_coord + 1, y_coord]);
+		if (y_coord > 0)
+			prey.AddRange (AquariumManager.fishGrid [x_coord, y_coord - 1]);
+		if (y_coord < (AquariumManager.VERTICAL_SQUARE_COUNT - 1))
+			prey.AddRange (AquariumManager.fishGrid [x_coord, y_coord + 1]);
+		if (x_coord > 0 && y_coord > 0)
+			prey.AddRange (AquariumManager.fishGrid [x_coord-1, y_coord-1]);
+		if (x_coord < (AquariumManager.HORIZONTAL_SQUARE_COUNT - 1) && y_coord > 0)
+			prey.AddRange (AquariumManager.fishGrid [x_coord+1, y_coord-1]);
+		if (x_coord < (AquariumManager.HORIZONTAL_SQUARE_COUNT - 1) && 
+			y_coord < (AquariumManager.VERTICAL_SQUARE_COUNT - 1))
+			prey.AddRange (AquariumManager.fishGrid [x_coord+1, y_coord+1]);
+		if (x_coord > 0 && y_coord < (AquariumManager.VERTICAL_SQUARE_COUNT - 1))
+			prey.AddRange (AquariumManager.fishGrid [x_coord-1, y_coord+1]);
+
+		return;*/
+
+
 		foreach(GameObject fish in GameObject.FindGameObjectsWithTag("Fish")){
 			float distance = Vector3.Distance (this.transform.position, fish.transform.position);
 			if (distance != 0 && distance < TEMP_RADIUS){
 				prey.Add (fish.GetComponent<Fish>());
 			}
 		}
+		/*
+		string coordinates = x_coord.ToString () + y_coord.ToString ();
+
+		if (AquariumManager.fishDict.ContainsKey(coordinates) && AquariumManager.fishDict[coordinates].Count > 0){
+			prey.Add (AquariumManager.fishDict [coordinates].Values.ToList());
+		}*/
 	}
 
 	void PreyBiteReady(List<Fish> prey){
@@ -206,10 +255,14 @@ public class Shark : MonoBehaviour {
 			spriteRenderer.sprite = normalSprite;
 			Instantiate (blood, poorfish.transform.position, Quaternion.identity);
 			this.GetComponent<AudioSource> ().Play ();
+			/*AquariumManager.fishGrid [poorfish.GetComponent<Fish> ().getX (),
+				poorfish.GetComponent<Fish> ().getY ()].Remove (poorfish.GetComponent<Fish> ());
+			AquariumManager.fishDict [poorfish.GetComponent<Fish> ().getX ().ToString () +
+			poorfish.GetComponent<Fish> ().getY ().ToString ()].Remove (poorfish.GetComponent<Fish> ().getID ());*/
 			Destroy (poorfish);
 			Debug.Log ("A fish has been eaten!");
+			Fish.FISH_COUNT--;
 			SharkWander = 800;
-			Debug.Log ("Wander has begun");
 		} else{
 			spriteRenderer.sprite = normalSprite;
 		}
@@ -305,4 +358,9 @@ public class Shark : MonoBehaviour {
 
 		return(steer);
 	}
+
+	public int getID(){
+		return(_ID);
+	}
+
 }

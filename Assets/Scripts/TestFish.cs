@@ -31,7 +31,6 @@ public class TestFish : MonoBehaviour {
 		Vector2 modifier = steerAwayFromWalls ();
 		Vector2 prepVelocity = this.GetComponent<Rigidbody2D>().velocity + modifier;
 		this.GetComponent<Rigidbody2D>().velocity = Vector2.ClampMagnitude(prepVelocity,MAX_SPEED);
-
 	}
 		
 	void setDirection() {

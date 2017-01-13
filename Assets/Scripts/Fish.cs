@@ -1,8 +1,9 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System.Linq;
 
-public class Fish : MonoBehaviour {
+public class Fish : Agent {
 	// Set our weights for the flocking behavior function
 	// A la Boids model https://en.wikipedia.org/wiki/Boids
 	public static float MAX_SPEED = 10f;
@@ -28,6 +29,9 @@ public class Fish : MonoBehaviour {
 	public static float BACKGROUND_HALF_WIDTH = 50f;
 	public static float BACKGROUND_HALF_HEIGHT = 28.125f;
 
+	//Lastly, our count of fish in order to keep track of the number of fish
+	public static int FISH_COUNT = 0;
+
 	// Private Frame Counter for Corner situation
 	// Corner situation is a situation where the shark has a fish cornered.
 	// Normally the forces applied would trap the fish in the corner
@@ -37,14 +41,27 @@ public class Fish : MonoBehaviour {
 	// and none seem to maintain the type of swimming behavior I desire.
 	private int CORNER_ESCAPE_COUNTER = 0;
 
+	// Global ID and instance ID, since instantiated objects have same IDs
+	private static int _globalID = 0;
+	private int _ID = 0;
+
+	void Awake(){
+		_ID = _globalID;
+		_globalID++;
+	}
+
 	// Use this for initialization
 	void Start () {
+		FISH_COUNT++;
 		// Start off with a slightly random direction
 		setDirection ();
 	}
 	
 	// Update is called once per frame
 	void Update () {
+		// AquariumManager.fishGridUpdate (this);
+		// AquariumManager.fishDictUpdate(this);
+
 		// First check if we are still running from a corner
 		if (CORNER_ESCAPE_COUNTER > 0){
 			CORNER_ESCAPE_COUNTER--;
@@ -65,6 +82,7 @@ public class Fish : MonoBehaviour {
 		// Will be changed to KNN.
 		List<Fish> neighbors = new List<Fish> ();
 		FindNeighbors (neighbors);
+
 		//Parallel to above for finding sharks.
 		List<Shark> predators = new List<Shark> ();
 		FindPredators (predators);
@@ -290,12 +308,87 @@ public class Fish : MonoBehaviour {
 		// Currently iterates through the entire list of fish within our scene
 		// and finds the ones within a certain radius of the fish
 		// and then appends them to the neighbors list if they are within the radius.
+
+		/*
+		foreach(Fish fish in AquariumManager.fishGrid[x_coord,y_coord]){
+			float distance = Vector3.Distance (this.transform.position, fish.transform.position);
+			if (distance != 0){
+				neighbors.Add (fish);
+			}
+		}
+
+		if (x_coord > 0)
+			neighbors.AddRange (AquariumManager.fishGrid [x_coord - 1, y_coord]);
+		if (x_coord < (AquariumManager.HORIZONTAL_SQUARE_COUNT - 1))
+			neighbors.AddRange (AquariumManager.fishGrid [x_coord + 1, y_coord]);
+		if (y_coord > 0)
+			neighbors.AddRange (AquariumManager.fishGrid [x_coord, y_coord - 1]);
+		if (y_coord < (AquariumManager.VERTICAL_SQUARE_COUNT - 1))
+			neighbors.AddRange (AquariumManager.fishGrid [x_coord, y_coord + 1]);
+		if (x_coord > 0 && y_coord > 0)
+			neighbors.AddRange (AquariumManager.fishGrid [x_coord-1, y_coord-1]);
+		if (x_coord < (AquariumManager.HORIZONTAL_SQUARE_COUNT - 1) && y_coord > 0)
+			neighbors.AddRange (AquariumManager.fishGrid [x_coord+1, y_coord-1]);
+		if (x_coord < (AquariumManager.HORIZONTAL_SQUARE_COUNT - 1) && 
+			y_coord < (AquariumManager.VERTICAL_SQUARE_COUNT - 1))
+			neighbors.AddRange (AquariumManager.fishGrid [x_coord+1, y_coord+1]);
+		if (x_coord > 0 && y_coord < (AquariumManager.VERTICAL_SQUARE_COUNT - 1))
+			neighbors.AddRange (AquariumManager.fishGrid [x_coord-1, y_coord+1]);
+
+		return;
+		*/
+
+		/*
+		foreach(GameObject fish in GameObject.FindGameObjectsWithTag("Fish")){
+			float distance = Vector3.Distance (this.transform.position, fish.transform.position);
+			if (distance != 0 && distance < TEMP_RADIUS){
+				neighbors.Add (fish.GetComponent<Fish>());
+			}
+		}*/
+		/* string coordinates = x_coord.ToString () + y_coord.ToString ();
+
+		AquariumManager.fishDict [coordinates].Remove (_ID);
+		neighbors.Add (AquariumManager.fishDict [coordinates].Values.ToList());
+		AquariumManager.fishDict [coordinates].Add (_ID, this);*/
+
+		/*
+		foreach(Fish fish in AquariumManager.fishDict[coordinates].Values){
+			float distance = Vector3.Distance (this.transform.position, fish.transform.position);
+			if (distance != 0){
+				neighbors.Add (fish);
+			}
+		}
+		string left = (x_coord - 1).ToString () + y_coord.ToString ();
+		string right = (x_coord + 1).ToString () + y_coord.ToString ();
+		string down = (x_coord).ToString () + (y_coord - 1).ToString ();
+		if (x_coord > 0)
+			neighbors.AddRange (AquariumManager.fishGrid [x_coord - 1, y_coord]);
+		if (x_coord < (AquariumManager.HORIZONTAL_SQUARE_COUNT - 1))
+			neighbors.AddRange (AquariumManager.fishGrid [x_coord + 1, y_coord]);
+		if (y_coord > 0)
+			neighbors.AddRange (AquariumManager.fishGrid [x_coord, y_coord - 1]);
+		if (y_coord < (AquariumManager.VERTICAL_SQUARE_COUNT - 1))
+			neighbors.AddRange (AquariumManager.fishGrid [x_coord, y_coord + 1]);
+		if (x_coord > 0 && y_coord > 0)
+			neighbors.AddRange (AquariumManager.fishGrid [x_coord-1, y_coord-1]);
+		if (x_coord < (AquariumManager.HORIZONTAL_SQUARE_COUNT - 1) && y_coord > 0)
+			neighbors.AddRange (AquariumManager.fishGrid [x_coord+1, y_coord-1]);
+		if (x_coord < (AquariumManager.HORIZONTAL_SQUARE_COUNT - 1) && 
+			y_coord < (AquariumManager.VERTICAL_SQUARE_COUNT - 1))
+			neighbors.AddRange (AquariumManager.fishGrid [x_coord+1, y_coord+1]);
+		if (x_coord > 0 && y_coord < (AquariumManager.VERTICAL_SQUARE_COUNT - 1))
+			neighbors.AddRange (AquariumManager.fishGrid [x_coord-1, y_coord+1]);
+
+		return;
+
+		neighbors.Add (AquariumManager.fishGrid [x_coord, y_coord]);*/
 		foreach(GameObject fish in GameObject.FindGameObjectsWithTag("Fish")){
 			float distance = Vector3.Distance (this.transform.position, fish.transform.position);
 			if (distance != 0 && distance < TEMP_RADIUS){
 				neighbors.Add (fish.GetComponent<Fish>());
 			}
 		}
+
 	}
 
 	void FindPredators(List<Shark> predators){
@@ -369,7 +462,7 @@ public class Fish : MonoBehaviour {
 
 		foreach (Fish fish in neighbors) {
 			float distance = Vector3.Distance (this.transform.position, fish.transform.position);
-			if (distance < SEPERATION_RADIUS){
+			if (distance > 0 && distance < SEPERATION_RADIUS){
 				Vector2 veerOff = (Vector2)this.transform.position - (Vector2)fish.transform.position;
 				veerOff.Normalize ();
 				veerOff /= distance;
@@ -449,5 +542,9 @@ public class Fish : MonoBehaviour {
 		else {
 			return avoid;
 		}
+	}
+
+	public int getID(){
+		return(_ID);
 	}
 }
