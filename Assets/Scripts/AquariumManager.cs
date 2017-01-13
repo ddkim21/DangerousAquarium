@@ -16,19 +16,29 @@ public class AquariumManager : MonoBehaviour {
 	public static float BACKGROUND_HALF_WIDTH = 50f;
 	public static float BACKGROUND_HALF_HEIGHT = 28.125f;
 
-	public static float SQUARE_LENGTH = 5f;
-	public static int NORMAL_SQUARE_COUNT = 10;
-	public static float ALTERED_SQUARE_LENGTH = 3.125f;
-	public static int VERTICAL_SQUARE_COUNT = 12;
-	public static int HORIZONTAL_SQUARE_COUNT = 20;
+	public static float SQUARE_LENGTH = 10f;
+	public static int NORMAL_SQUARE_COUNT = 4;
+	public static float ALTERED_SQUARE_LENGTH = 8.125f;
+	public static int VERTICAL_SQUARE_COUNT = 6;
+	public static int HORIZONTAL_SQUARE_COUNT = 10;
 	/*
 	public static List<Fish> [,] fishGrid;
 	public static List<Shark> [,] sharkGrid;
 	public static Dictionary<string, Dictionary<int, Fish>> fishDict;
 	public static Dictionary<string, Dictionary<int, Shark>> sharkDict;*/
 
+	public static Node[,] fishArray;
+	public static Node[,] sharkArray;
 
 	void Start (){
+		fishArray = new Node[HORIZONTAL_SQUARE_COUNT, VERTICAL_SQUARE_COUNT];
+		sharkArray = new Node[HORIZONTAL_SQUARE_COUNT, VERTICAL_SQUARE_COUNT];
+
+		for (int x = 0; x < HORIZONTAL_SQUARE_COUNT; x++)
+			for (int y = 0; y < VERTICAL_SQUARE_COUNT; y++) {
+				fishArray [x, y] = null;
+				sharkArray [x, y] = null;
+		}
 
 		/*
 		fishDict = new Dictionary<string, Dictionary<int, Fish>>();
@@ -45,6 +55,7 @@ public class AquariumManager : MonoBehaviour {
 	}
 
 	void Update() {
+		Debug.Log (1.0f / Time.deltaTime);
 		fish_counter.GetComponent<UnityEngine.UI.Text>().text = Fish.FISH_COUNT.ToString() + " Fish";
 		shark_counter.GetComponent<UnityEngine.UI.Text>().text = Shark.SHARK_COUNT.ToString() + " Sharks";
 	}
@@ -252,4 +263,97 @@ public class AquariumManager : MonoBehaviour {
 			shark.setY (grid_y);
 		}
 	}*/
+
+	public static void fishArrayUpdate(Fish fish){
+		float xposition = fish.transform.position.x;
+		float yposition = fish.transform.position.y;
+
+		xposition += BACKGROUND_HALF_WIDTH;
+		yposition += BACKGROUND_HALF_HEIGHT;
+
+		int grid_x = (int)(xposition / SQUARE_LENGTH);
+		int grid_y = 0;
+		if (0 <= yposition && yposition < ALTERED_SQUARE_LENGTH)
+			grid_y = 0;
+		else if (yposition >= NORMAL_SQUARE_COUNT * SQUARE_LENGTH + ALTERED_SQUARE_LENGTH)
+			grid_y = NORMAL_SQUARE_COUNT + 1;
+		else {
+			grid_y = (int)((yposition - ALTERED_SQUARE_LENGTH) / SQUARE_LENGTH);
+			grid_y++;
+		}
+		if (fish.getX() == -1){
+			Node node = new Node (fish.gameObject);
+			fish.setNode (node);
+			Node gridTarget = fishArray [grid_x, grid_y];
+			if (gridTarget != null){
+				gridTarget.setPrev (node);
+			}
+			node.setNext (gridTarget);
+			fishArray [grid_x, grid_y] = node;
+			fish.setX (grid_x);
+			fish.setY (grid_y);
+		}
+		else if (grid_x != fish.getX() || grid_y != fish.getY()){
+			Node node = fish.GetNode;
+			if (node.Previous == null){
+				fishArray [fish.getX (), fish.getY ()] = node.Next;
+			}
+			node.removeSelf ();
+			Node gridTarget = fishArray [grid_x, grid_y];
+			if (gridTarget != null){
+				gridTarget.setPrev (node);
+			}
+			node.setNext (gridTarget);
+			fishArray [grid_x, grid_y] = node;
+			fish.setX (grid_x);
+			fish.setY (grid_y);
+		}
+	}
+
+	public static void sharkArrayUpdate(Shark shark){
+		float xposition = shark.transform.position.x;
+		float yposition = shark.transform.position.y;
+
+		xposition += BACKGROUND_HALF_WIDTH;
+		yposition += BACKGROUND_HALF_HEIGHT;
+
+		int grid_x = (int)(xposition / SQUARE_LENGTH);
+		int grid_y = 0;
+		if (0 <= yposition && yposition < ALTERED_SQUARE_LENGTH)
+			grid_y = 0;
+		else if (yposition >= NORMAL_SQUARE_COUNT * SQUARE_LENGTH + ALTERED_SQUARE_LENGTH)
+			grid_y = NORMAL_SQUARE_COUNT + 1;
+		else {
+			grid_y = (int)((yposition - ALTERED_SQUARE_LENGTH) / SQUARE_LENGTH);
+			grid_y++;
+		}
+		if (shark.getX() == -1){
+			Node node = new Node (shark.gameObject);
+			shark.setNode (node);
+			Node gridTarget = sharkArray [grid_x, grid_y];
+			if (gridTarget != null){
+				gridTarget.setPrev (node);
+			}
+			node.setNext (gridTarget);
+			sharkArray [grid_x, grid_y] = node;
+			shark.setX (grid_x);
+			shark.setY (grid_y);
+		}
+		else if (grid_x != shark.getX() || grid_y != shark.getY()){
+			Node node = shark.GetNode;
+			if (node.Previous == null){
+				sharkArray [shark.getX (), shark.getY ()] = node.Next;
+			}
+			node.removeSelf ();
+			Node gridTarget = sharkArray [grid_x, grid_y];
+			if (gridTarget != null){
+				gridTarget.setPrev (node);
+			}
+			node.setNext (gridTarget);
+			sharkArray [grid_x, grid_y] = node;
+			shark.setX (grid_x);
+			shark.setY (grid_y);
+		}
+	}
+
 }

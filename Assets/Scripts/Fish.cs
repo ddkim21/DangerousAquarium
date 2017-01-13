@@ -44,8 +44,11 @@ public class Fish : Agent {
 	// Global ID and instance ID, since instantiated objects have same IDs
 	private static int _globalID = 0;
 	private int _ID = 0;
+	// Private Node for doubly linked list implementation
+	private Node node;
 
 	void Awake(){
+		node = null;
 		_ID = _globalID;
 		_globalID++;
 	}
@@ -61,6 +64,7 @@ public class Fish : Agent {
 	void Update () {
 		// AquariumManager.fishGridUpdate (this);
 		// AquariumManager.fishDictUpdate(this);
+		AquariumManager.fishArrayUpdate(this);
 
 		// First check if we are still running from a corner
 		if (CORNER_ESCAPE_COUNTER > 0){
@@ -80,8 +84,9 @@ public class Fish : Agent {
 		// Create and populate list of neighbors
 		// or fish within the radius of the current fish.
 		// Will be changed to KNN.
-		List<Fish> neighbors = new List<Fish> ();
-		FindNeighbors (neighbors);
+		// List<Fish> neighbors = new List<Fish> ();
+		// FindNeighbors (neighbors);
+		Node neighbors = FindNeighbors();
 
 		//Parallel to above for finding sharks.
 		List<Shark> predators = new List<Shark> ();
@@ -99,7 +104,7 @@ public class Fish : Agent {
 		//Modifier is determined by the Flock function and Escape function. 
 		Vector2 modifier = Flock(neighbors) + Escape(predators) * ESCAPE_WEIGHT;
 		//Also include potential wall buffers
-		modifier += steerAwayFromWalls() * WALL_WEIGHT;
+		modifier = steerAwayFromWalls() * WALL_WEIGHT;
 		Vector2 prepVelocity = this.GetComponent<Rigidbody2D>().velocity + modifier;
 		//Limit speed of fish if necessary
 		this.GetComponent<Rigidbody2D>().velocity = Vector2.ClampMagnitude(prepVelocity,MAX_SPEED);
@@ -304,10 +309,21 @@ public class Fish : Agent {
 		return(steer);
 	}
 
-	void FindNeighbors(List<Fish> neighbors){
+	Node FindNeighbors(){
 		// Currently iterates through the entire list of fish within our scene
 		// and finds the ones within a certain radius of the fish
 		// and then appends them to the neighbors list if they are within the radius.
+
+		Node currentCell = AquariumManager.fishArray [x_coord, y_coord];
+		/*
+		while (currentCell != null){
+			float distance = Vector3.Distance (this.transform.position, currentCell.data.transform.position);
+			if (distance != 0){
+				neighbors.Add (currentCell.data.GetComponent<Fish> ());
+			}
+			currentCell = currentCell.Next;
+		}*/
+		return (currentCell);
 
 		/*
 		foreach(Fish fish in AquariumManager.fishGrid[x_coord,y_coord]){
@@ -382,12 +398,13 @@ public class Fish : Agent {
 		return;
 
 		neighbors.Add (AquariumManager.fishGrid [x_coord, y_coord]);*/
+		/*
 		foreach(GameObject fish in GameObject.FindGameObjectsWithTag("Fish")){
 			float distance = Vector3.Distance (this.transform.position, fish.transform.position);
 			if (distance != 0 && distance < TEMP_RADIUS){
 				neighbors.Add (fish.GetComponent<Fish>());
 			}
-		}
+		}*/
 
 	}
 
@@ -401,7 +418,19 @@ public class Fish : Agent {
 		}
 	}
 
-	Vector2 Flock(List<Fish> neighbors){
+	/*Vector2 Flock(List<Fish> neighbors){
+		// Boids governs the movement of a fish based off of three rules:
+		// coherence, seperation, and alignment.
+		// The influences of each are added to the current velocity of the fish
+		// also taking into account how we want to weight the influence of each.
+		Vector2 coherence = Cohere (neighbors) * COHERE_WEIGHT;
+		Vector2 alignment = Align (neighbors) * ALIGN_WEIGHT;
+		Vector2 seperation = Seperate(neighbors) * SEPERATE_WEIGHT;
+
+		return(seperation + alignment + coherence);
+	}*/
+
+	Vector2 Flock(Node neighbors){
 		// Boids governs the movement of a fish based off of three rules:
 		// coherence, seperation, and alignment.
 		// The influences of each are added to the current velocity of the fish
@@ -413,6 +442,7 @@ public class Fish : Agent {
 		return(seperation + alignment + coherence);
 	}
 
+	/*
 	Vector2 Cohere(List<Fish> neighbors){
 		// Cohere means to steer towards the center of your neighbors
 
@@ -428,8 +458,32 @@ public class Fish : Agent {
 			Vector2 current2Dpos = new Vector2 (this.transform.position.x, this.transform.position.y);
 			return(steerTo (center - current2Dpos)); // Pass vector of travel to get to center
 		}
-	}
+	}*/
 
+	Vector2 Cohere(Node neighbors){
+		// Cohere means to steer towards the center of your neighbors
+
+		Vector2 center = new Vector2 (0f, 0f);
+
+		if (neighbors.Next == null) {
+			return center;
+		} else {
+			int count = 0;
+			while (neighbors != null){
+				Fish fish = neighbors.data.GetComponent<Fish> ();
+				float distance = Vector3.Distance (this.transform.position, fish.transform.position);
+				if (distance != 0){
+					center += (Vector2)fish.transform.position;
+					count++;
+				}
+				neighbors = neighbors.Next;
+			}
+			center /= count;
+			Vector2 current2Dpos = new Vector2 (this.transform.position.x, this.transform.position.y);
+			return(steerTo (center - current2Dpos)); // Pass vector of travel to get to center
+		}
+	}
+	/*
 	Vector2 Align(List<Fish> neighbors){
 		// Align functions via finding the average velocity of all of a fish's neighbors
 		// and steering towards the average velocity of its neighbors
@@ -444,8 +498,26 @@ public class Fish : Agent {
 			average /= neighbors.Count;
 			return(steerTo (average));
 		}
-	}
+	}*/
 
+	Vector2 Align(Node neighbors){
+		// Align functions via finding the average velocity of all of a fish's neighbors
+		// and steering towards the average velocity of its neighbors
+		Vector2 average = new Vector2 (0f, 0f);
+		if (neighbors.Next == null){
+			return average;
+		} else {
+			int count = 0;
+			while(neighbors != null){
+				Fish fish = neighbors.data.GetComponent<Fish> ();
+				average += fish.GetComponent<Rigidbody2D> ().velocity;
+				neighbors = neighbors.Next;
+			}
+			average /= count;
+			return(steerTo (average));
+		}
+	}
+	/*
 	Vector2 Seperate(List<Fish> neighbors){
 		// Seperate functions by finding the fish within its SEPERATION_RADIUS
 		// If a fish is within its seperation radius, we tell the fish to steer
@@ -471,6 +543,44 @@ public class Fish : Agent {
 			} 
 		}
 
+		if (count > 0 && avoid.magnitude > 0){
+			avoid /= count;
+			return (steerTo (avoid));
+		} 
+		else {
+			return avoid;
+		}
+	}*/
+
+	Vector2 Seperate(Node neighbors){
+		// Seperate functions by finding the fish within its SEPERATION_RADIUS
+		// If a fish is within its seperation radius, we tell the fish to steer
+		// in the direction that is directly away from the fish within its seperation radius
+
+		// Before telling the fish to steer away however, we add up all the "veer off" vectors
+		// inversely by their distance from the fish. In other words, the closer a fish is
+		// the more influence they will have on the primary fish's movement.
+
+		// We then find the average, and tell the fish to steer in that direction.
+
+		Vector2 avoid = new Vector2 (0f, 0f);
+		int count = 0;
+		if (neighbors.Next == null) {
+			return avoid;
+		} else {
+			while (neighbors != null) {
+				Fish fish = neighbors.data.GetComponent<Fish> ();
+				float distance = Vector3.Distance (this.transform.position, fish.transform.position);
+				if (distance > 0 && distance < SEPERATION_RADIUS) {
+					Vector2 veerOff = (Vector2)this.transform.position - (Vector2)fish.transform.position;
+					veerOff.Normalize ();
+					veerOff /= distance;
+					avoid += veerOff;
+					count++;
+				}
+				neighbors = neighbors.Next;
+			}
+		}
 		if (count > 0 && avoid.magnitude > 0){
 			avoid /= count;
 			return (steerTo (avoid));
@@ -546,5 +656,15 @@ public class Fish : Agent {
 
 	public int getID(){
 		return(_ID);
+	}
+
+	public Node GetNode{
+		get{
+			return(node);
+		}
+	}
+
+	public void setNode(Node newNode){
+		node = newNode;
 	}
 }

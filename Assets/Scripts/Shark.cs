@@ -44,6 +44,9 @@ public class Shark : Agent {
 	private static int _globalID = 0;
 	private int _ID = 0;
 
+	private Node node;
+
+
 	void Awake (){
 		_ID = _globalID;
 		_globalID++;
@@ -61,6 +64,8 @@ public class Shark : Agent {
 	void Update () {
 		// AquariumManager.sharkGridUpdate (this);
 		// AquariumManager.sharkDictUpdate(this);
+		AquariumManager.sharkArrayUpdate(this);
+
 
 		// Check if our shark is about to go out of bounds of the camera
 		string outofbound = OutOfBounds ();
@@ -197,6 +202,15 @@ public class Shark : Agent {
 		// and then appends them to the neighbors list if they are within the radius.
 
 		/*
+		Debug.Log(x_coord);
+		Debug.Log (y_coord);
+		Node currentCell = AquariumManager.fishArray [x_coord, y_coord];
+		while (currentCell != null){
+			prey.Add (currentCell.data.GetComponent<Fish> ());
+			currentCell = currentCell.Next;
+		}*/
+
+		/*
 		prey.AddRange (AquariumManager.fishGrid [x_coord, y_coord]);
 
 		if (x_coord > 0)
@@ -226,6 +240,7 @@ public class Shark : Agent {
 				prey.Add (fish.GetComponent<Fish>());
 			}
 		}
+
 		/*
 		string coordinates = x_coord.ToString () + y_coord.ToString ();
 
@@ -259,6 +274,13 @@ public class Shark : Agent {
 				poorfish.GetComponent<Fish> ().getY ()].Remove (poorfish.GetComponent<Fish> ());
 			AquariumManager.fishDict [poorfish.GetComponent<Fish> ().getX ().ToString () +
 			poorfish.GetComponent<Fish> ().getY ().ToString ()].Remove (poorfish.GetComponent<Fish> ().getID ());*/
+			Node node = poorfish.GetComponent<Fish> ().GetNode;
+			if(node.Previous == null){
+				AquariumManager.fishArray [poorfish.GetComponent<Fish> ().getX (),
+					poorfish.GetComponent<Fish> ().getY ()] = node.Next;
+			}
+			node.removeSelf();
+
 			Destroy (poorfish);
 			Debug.Log ("A fish has been eaten!");
 			Fish.FISH_COUNT--;
@@ -361,6 +383,16 @@ public class Shark : Agent {
 
 	public int getID(){
 		return(_ID);
+	}
+
+	public Node GetNode{
+		get{
+			return(node);
+		}
+	}
+
+	public void setNode(Node newNode){
+		node = newNode;
 	}
 
 }
