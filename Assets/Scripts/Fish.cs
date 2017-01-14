@@ -31,6 +31,14 @@ public class Fish : Agent {
 
 	//Lastly, our count of fish in order to keep track of the number of fish
 	public static int FISH_COUNT = 0;
+	public static bool BRUTE_FORCE = false;
+	public static bool LINKEDLIST_IMP = true;
+	public static bool GRID_IMP = false;
+	public static bool INTGRID_IMP = false;
+
+
+	public static List<Fish> ALL_FISH;
+	public static bool STARTED = false;
 
 	// Private Frame Counter for Corner situation
 	// Corner situation is a situation where the shark has a fish cornered.
@@ -48,6 +56,12 @@ public class Fish : Agent {
 	private Node node;
 
 	void Awake(){
+		if (STARTED == false){
+			Debug.Log("This is being run");
+			ALL_FISH = new List<Fish>();
+			STARTED = true;
+		}
+		ALL_FISH.Add(this);
 		node = null;
 		_ID = _globalID;
 		_globalID++;
@@ -64,7 +78,17 @@ public class Fish : Agent {
 	void Update () {
 		// AquariumManager.fishGridUpdate (this);
 		// AquariumManager.fishDictUpdate(this);
-		AquariumManager.fishArrayUpdate(this);
+		if(LINKEDLIST_IMP){
+			AquariumManager.fishArrayUpdate(this);
+		}
+
+		if(GRID_IMP){
+			AquariumManager.fishGridUpdate (this);
+		}
+
+		if(INTGRID_IMP){
+			AquariumManager.fishIntGridUpdate(this);
+		}
 
 		// First check if we are still running from a corner
 		if (CORNER_ESCAPE_COUNTER > 0){
@@ -86,7 +110,26 @@ public class Fish : Agent {
 		// Will be changed to KNN.
 		// List<Fish> neighbors = new List<Fish> ();
 		// FindNeighbors (neighbors);
-		Node neighbors = FindNeighbors();
+		List<Fish> neighbors = new List<Fish>();
+
+		if(LINKEDLIST_IMP){
+			FindNeighborsLinked(neighbors);
+		}
+
+
+		if(BRUTE_FORCE){
+			FindNeighborsBrute(neighbors);
+		}
+
+		if(GRID_IMP){
+			FindNeighborsGrid(neighbors);
+		}
+
+		if(INTGRID_IMP){
+			FindNeighborsIntGrid(neighbors);
+		}
+
+		// FindNeighbors(neighbors);
 
 		//Parallel to above for finding sharks.
 		List<Shark> predators = new List<Shark> ();
@@ -102,9 +145,9 @@ public class Fish : Agent {
 
 		//Add modifier to the velocity.
 		//Modifier is determined by the Flock function and Escape function. 
-		Vector2 modifier = Flock(neighbors) + Escape(predators) * ESCAPE_WEIGHT;
+		//Vector2 modifier = Flock(neighbors) + Escape(predators) * ESCAPE_WEIGHT;
 		//Also include potential wall buffers
-		modifier = steerAwayFromWalls() * WALL_WEIGHT;
+		Vector2 modifier = steerAwayFromWalls() * WALL_WEIGHT;
 		Vector2 prepVelocity = this.GetComponent<Rigidbody2D>().velocity + modifier;
 		//Limit speed of fish if necessary
 		this.GetComponent<Rigidbody2D>().velocity = Vector2.ClampMagnitude(prepVelocity,MAX_SPEED);
@@ -309,21 +352,20 @@ public class Fish : Agent {
 		return(steer);
 	}
 
-	Node FindNeighbors(){
+	/* void FindNeighbors(List<Fish> neighbors){
 		// Currently iterates through the entire list of fish within our scene
 		// and finds the ones within a certain radius of the fish
 		// and then appends them to the neighbors list if they are within the radius.
 
 		Node currentCell = AquariumManager.fishArray [x_coord, y_coord];
-		/*
+
 		while (currentCell != null){
 			float distance = Vector3.Distance (this.transform.position, currentCell.data.transform.position);
 			if (distance != 0){
 				neighbors.Add (currentCell.data.GetComponent<Fish> ());
 			}
 			currentCell = currentCell.Next;
-		}*/
-		return (currentCell);
+		}
 
 		/*
 		foreach(Fish fish in AquariumManager.fishGrid[x_coord,y_coord]){
@@ -404,8 +446,95 @@ public class Fish : Agent {
 			if (distance != 0 && distance < TEMP_RADIUS){
 				neighbors.Add (fish.GetComponent<Fish>());
 			}
-		}*/
+		}
 
+	}*/
+
+	void FindNeighborsGrid(List<Fish> neighbors){
+		List<Fish> cell_list =AquariumManager.fishGrid[x_coord,y_coord];
+		foreach(Fish fish in cell_list){
+			float distance = Vector3.Distance (this.transform.position, fish.transform.position);
+			if (distance != 0){
+				neighbors.Add (fish);
+			}
+		}
+
+		int[] xindices = new int[3]{x_coord-1, x_coord, x_coord + 1};
+		int[] yindices = new int[3]{y_coord-1, y_coord, y_coord + 1}; 
+		foreach (int x in xindices){
+			if (x >= 0 && x < AquariumManager.HORIZONTAL_SQUARE_COUNT){
+				foreach (int y in yindices){
+					if (y >= 0 && y < AquariumManager.VERTICAL_SQUARE_COUNT){
+						foreach(Fish fish in AquariumManager.fishGrid[x,y]){
+							neighbors.Add(fish);
+						}
+					}
+				}
+			}
+		}
+	}
+
+	void FindNeighborsIntGrid(List<Fish> neighbors){
+		int count = 0;
+		List<int> cell_list =AquariumManager.fishIntGrid[x_coord,y_coord];
+		foreach(int id in cell_list){
+			if (id != _ID){
+				neighbors.Add (ALL_FISH[id]);
+			}
+		}
+
+		int[] xindices = new int[3]{x_coord-1, x_coord, x_coord + 1};
+		int[] yindices = new int[3]{y_coord-1, y_coord, y_coord + 1}; 
+		foreach (int x in xindices){
+			if (x >= 0 && x < AquariumManager.HORIZONTAL_SQUARE_COUNT){
+				foreach (int y in yindices){
+					if (y >= 0 && y < AquariumManager.VERTICAL_SQUARE_COUNT){
+						foreach(int id in AquariumManager.fishIntGrid[x,y]){
+							neighbors.Add (ALL_FISH[id]);
+						}
+					}
+				}
+			}
+		}
+	}
+
+	void FindNeighborsBrute(List<Fish> neighbors){
+		foreach(GameObject fish in GameObject.FindGameObjectsWithTag("Fish")){
+			float distance = Vector3.Distance (this.transform.position, fish.transform.position);
+			if (distance != 0 && distance < TEMP_RADIUS){
+				neighbors.Add (fish.GetComponent<Fish>());
+			}
+		}
+	}
+
+	void FindNeighborsLinked(List<Fish> neighbors){
+
+		Node currentCell = AquariumManager.fishArray [x_coord, y_coord];
+		while (currentCell != null){
+				Fish fish = currentCell.data.GetComponent<Fish>();
+				float distance = Vector3.Distance (this.transform.position, fish.transform.position);
+				if (distance != 0 && distance < TEMP_RADIUS){
+					neighbors.Add(fish);
+				}
+				currentCell = currentCell.Next;
+		}
+
+		int[] xindices = new int[3]{x_coord-1, x_coord, x_coord + 1};
+		int[] yindices = new int[3]{y_coord-1, y_coord, y_coord + 1}; 
+		foreach (int x in xindices){
+			if (x >= 0 && x < AquariumManager.HORIZONTAL_SQUARE_COUNT){
+				foreach (int y in yindices){
+					if (y >= 0 && y < AquariumManager.VERTICAL_SQUARE_COUNT){
+						Node cell = AquariumManager.fishArray[x,y];
+						while(cell != null){
+								Fish fish = cell.data.GetComponent<Fish>();
+								neighbors.Add(fish);
+								cell = cell.Next;
+						}
+					}
+				}
+			}
+		}
 	}
 
 	void FindPredators(List<Shark> predators){
@@ -654,8 +783,10 @@ public class Fish : Agent {
 		}
 	}
 
-	public int getID(){
+	public int ID{
+		get{
 		return(_ID);
+		}
 	}
 
 	public Node GetNode{

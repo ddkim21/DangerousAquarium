@@ -21,11 +21,13 @@ public class AquariumManager : MonoBehaviour {
 	public static float ALTERED_SQUARE_LENGTH = 8.125f;
 	public static int VERTICAL_SQUARE_COUNT = 6;
 	public static int HORIZONTAL_SQUARE_COUNT = 10;
-	/*
+
 	public static List<Fish> [,] fishGrid;
-	public static List<Shark> [,] sharkGrid;
+	public static List<Shark> [,] sharkGrid;/*
 	public static Dictionary<string, Dictionary<int, Fish>> fishDict;
 	public static Dictionary<string, Dictionary<int, Shark>> sharkDict;*/
+
+	public static List<int>[,] fishIntGrid;
 
 	public static Node[,] fishArray;
 	public static Node[,] sharkArray;
@@ -33,7 +35,7 @@ public class AquariumManager : MonoBehaviour {
 	void Start (){
 		fishArray = new Node[HORIZONTAL_SQUARE_COUNT, VERTICAL_SQUARE_COUNT];
 		sharkArray = new Node[HORIZONTAL_SQUARE_COUNT, VERTICAL_SQUARE_COUNT];
-
+		Debug.Log("This is also being run");
 		for (int x = 0; x < HORIZONTAL_SQUARE_COUNT; x++)
 			for (int y = 0; y < VERTICAL_SQUARE_COUNT; y++) {
 				fishArray [x, y] = null;
@@ -44,20 +46,24 @@ public class AquariumManager : MonoBehaviour {
 		fishDict = new Dictionary<string, Dictionary<int, Fish>>();
 		sharkDict = new Dictionary<string, Dictionary<int, Shark>> ();*/
 
-		/*fishGrid = new List<Fish>[HORIZONTAL_SQUARE_COUNT,VERTICAL_SQUARE_COUNT];
-		sharkGrid = new List<Shark>[HORIZONTAL_SQUARE_COUNT, VERTICAL_SQUARE_COUNT];*/
+		fishGrid = new List<Fish>[HORIZONTAL_SQUARE_COUNT,VERTICAL_SQUARE_COUNT];
+		sharkGrid = new List<Shark>[HORIZONTAL_SQUARE_COUNT, VERTICAL_SQUARE_COUNT];
 
-		/*for (int x = 0; x < HORIZONTAL_SQUARE_COUNT; x++)
+		fishIntGrid = new List<int>[HORIZONTAL_SQUARE_COUNT, VERTICAL_SQUARE_COUNT];
+
+		for (int x = 0; x < HORIZONTAL_SQUARE_COUNT; x++)
 			for (int y = 0; y < VERTICAL_SQUARE_COUNT; y++) {
 				fishGrid [x, y] = new List<Fish> ();
 				sharkGrid [x, y] = new List<Shark> ();
-			}*/
+				fishIntGrid[x, y] = new List<int>();
+			}
 	}
 
 	void Update() {
-		Debug.Log (1.0f / Time.deltaTime);
+		print(1.0f / Time.deltaTime);
 		fish_counter.GetComponent<UnityEngine.UI.Text>().text = Fish.FISH_COUNT.ToString() + " Fish";
 		shark_counter.GetComponent<UnityEngine.UI.Text>().text = Shark.SHARK_COUNT.ToString() + " Sharks";
+
 	}
 
 	public void AddTenFish(){
@@ -70,6 +76,7 @@ public class AquariumManager : MonoBehaviour {
 				                BACKGROUND_HALF_HEIGHT - buffer);
 			Vector3 position = new Vector3 (randomX, randomY, -1);
 			GameObject thisFish = Instantiate (fish, position, Quaternion.identity);
+			thisFish.tag = "Fish";
 			thisFish.transform.parent = fishes.transform;
 			count--;
 		}
@@ -99,7 +106,7 @@ public class AquariumManager : MonoBehaviour {
 	public string SharkCounter(){
 		return (Shark.SHARK_COUNT.ToString ());
 	}
-	/*
+
 	public static void fishGridUpdate(Fish fish){
 		float xposition = fish.transform.position.x;
 		float yposition = fish.transform.position.y;
@@ -158,7 +165,39 @@ public class AquariumManager : MonoBehaviour {
 			shark.setX (grid_x);
 			shark.setY (grid_y);
 		}
-	}*/
+	}
+
+	public static void fishIntGridUpdate(Fish fish){
+		float xposition = fish.transform.position.x;
+		float yposition = fish.transform.position.y;
+
+		xposition += BACKGROUND_HALF_WIDTH;
+		yposition += BACKGROUND_HALF_HEIGHT;
+		int grid_x = (int)(xposition / SQUARE_LENGTH);
+		int grid_y = 0;
+
+		if (0 <= yposition && yposition < ALTERED_SQUARE_LENGTH)
+			grid_y = 0;
+		else if (yposition >= NORMAL_SQUARE_COUNT * SQUARE_LENGTH + ALTERED_SQUARE_LENGTH)
+			grid_y = NORMAL_SQUARE_COUNT + 1;
+		else {
+			grid_y = (int)((yposition - ALTERED_SQUARE_LENGTH) / SQUARE_LENGTH);
+			grid_y++;
+		}
+
+		if (fish.getX() == -1){
+			fishIntGrid [grid_x, grid_y].Add (fish.ID);
+			fish.setX (grid_x);
+			fish.setY (grid_y);
+		}
+		else if (grid_x != fish.getX() || grid_y != fish.getY()){
+			fishIntGrid [fish.getX (), fish.getY ()].Remove (fish.ID);
+			fishIntGrid [grid_x, grid_y].Add (fish.ID);
+			fish.setX (grid_x);
+			fish.setY (grid_y);
+		}
+	}
+
 	/*
 	public static void fishDictUpdate(Fish fish){
 		float xposition = fish.transform.position.x;
