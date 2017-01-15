@@ -1,0 +1,63 @@
+Initialize engine version: 5.5.0f3 (38b4efef76f0)
+GfxDevice: creating device client; threaded=1
+Direct3D:
+    Version:  Direct3D 11.0 [level 11.0]
+    Renderer: NVIDIA GeForce GTX 970 (ID=0x13c2)
+    Vendor:   NVIDIA
+    VRAM:     3072 MB
+    Driver:   21.21.13.7270
+Begin MonoManager ReloadAssembly
+Platform assembly: H:\repos\Unity Projects\Osmo\DangerousAquarium\DangerousAquariumWindows_Data\Managed\UnityEngine.dll (this message is harmless)
+Loading H:\repos\Unity Projects\Osmo\DangerousAquarium\DangerousAquariumWindows_Data\Managed\UnityEngine.dll into Unity Child Domain
+Platform assembly: H:\repos\Unity Projects\Osmo\DangerousAquarium\DangerousAquariumWindows_Data\Managed\Assembly-CSharp.dll (this message is harmless)
+Loading H:\repos\Unity Projects\Osmo\DangerousAquarium\DangerousAquariumWindows_Data\Managed\Assembly-CSharp.dll into Unity Child Domain
+Platform assembly: H:\repos\Unity Projects\Osmo\DangerousAquarium\DangerousAquariumWindows_Data\Managed\UnityEngine.UI.dll (this message is harmless)
+Loading H:\repos\Unity Projects\Osmo\DangerousAquarium\DangerousAquariumWindows_Data\Managed\UnityEngine.UI.dll into Unity Child Domain
+Platform assembly: H:\repos\Unity Projects\Osmo\DangerousAquarium\DangerousAquariumWindows_Data\Managed\UnityEngine.Networking.dll (this message is harmless)
+Loading H:\repos\Unity Projects\Osmo\DangerousAquarium\DangerousAquariumWindows_Data\Managed\UnityEngine.Networking.dll into Unity Child Domain
+Platform assembly: H:\repos\Unity Projects\Osmo\DangerousAquarium\DangerousAquariumWindows_Data\Managed\UnityEngine.PlaymodeTestsRunner.dll (this message is harmless)
+Loading H:\repos\Unity Projects\Osmo\DangerousAquarium\DangerousAquariumWindows_Data\Managed\UnityEngine.PlaymodeTestsRunner.dll into Unity Child Domain
+Platform assembly: H:\repos\Unity Projects\Osmo\DangerousAquarium\DangerousAquariumWindows_Data\Managed\UnityEngine.Analytics.dll (this message is harmless)
+Loading H:\repos\Unity Projects\Osmo\DangerousAquarium\DangerousAquariumWindows_Data\Managed\UnityEngine.Analytics.dll into Unity Child Domain
+- Completed reload, in  0.037 seconds
+Platform assembly: H:\repos\Unity Projects\Osmo\DangerousAquarium\DangerousAquariumWindows_Data\Managed\System.Core.dll (this message is harmless)
+Platform assembly: H:\repos\Unity Projects\Osmo\DangerousAquarium\DangerousAquariumWindows_Data\Managed\System.dll (this message is harmless)
+desktop: 1920x1080 60Hz; virtual: 3840x1080 at 0,0
+<RI> Initializing input.
+<RI> Input initialized.
+<RI> Initialized touch support.
+UnloadTime: 3.562665 ms
+New Level load: Aquarium
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Unloading 5 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 4.075249 ms
+
+Unloading 6 unused Assets to reduce memory usage. Loaded Objects now: 522.
+Total: 0.212164 ms (FindLiveObjects: 0.017534 ms CreateObjectMapping: 0.011689 ms MarkObjects: 0.171543 ms  DeleteObjects: 0.011105 ms)
+
+A fish has been eaten!
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+A fish has been eaten!
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+New Level load: End
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Unloading 3 Unused Serialized files (Serialized files now loaded: 0)
+UnloadTime: 0.616620 ms
+
+Unloading 18 unused Assets to reduce memory usage. Loaded Objects now: 290.
+Total: 0.213333 ms (FindLiveObjects: 0.013150 ms CreateObjectMapping: 0.011105 ms MarkObjects: 0.160730 ms  DeleteObjects: 0.028054 ms)
+
+Quit requested
+ 
+(Filename: C:/buildslave/unity/build/artifacts/generated/common/runtime/DebugBindings.gen.cpp Line: 51)
+
+Setting up 1 worker threads for Enlighten.
+  Thread -> id: 30f0 -> priority: 1 

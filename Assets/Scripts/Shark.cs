@@ -10,7 +10,7 @@ public class Shark : Agent {
 	public static float COHERE_WEIGHT = (11f);
 	public static float SEPERATE_WEIGHT = 12.5f;
 	public static float WANDER_WEIGHT = 8.5f;
-	public static float DISPERSE_WEIGHT = 50f;
+	public static float DISPERSE_WEIGHT = 35f;
 	public static float TEMP_RADIUS = 15f;
 	public static float SEPERATION_RADIUS = 7.5f;
 
