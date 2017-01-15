@@ -28,6 +28,13 @@ public class Shark : Agent {
 	public Sprite biteSprite;
 	public GameObject blood;
 
+	public static bool BRUTE_FORCE = false;
+	public static bool GRID_IMPLEMENTATION = true;
+
+	public static List<Shark> ALL_SHARKS;
+	public static bool STARTED = false;
+
+
 	private SpriteRenderer spriteRenderer; 
 	private Sprite normalSprite;
 
@@ -44,10 +51,15 @@ public class Shark : Agent {
 	private static int _globalID = 0;
 	private int _ID = 0;
 
-	private Node node;
 
 
 	void Awake (){
+		if (STARTED == false){
+			Debug.Log("This is being run");
+			ALL_SHARKS = new List<Shark>();
+			STARTED = true;
+		}
+		ALL_SHARKS.Add(this);
 		_ID = _globalID;
 		_globalID++;
 	}
@@ -62,10 +74,9 @@ public class Shark : Agent {
 
 	// Update is called once per frame
 	void Update () {
-		// AquariumManager.sharkGridUpdate (this);
-		// AquariumManager.sharkDictUpdate(this);
-		AquariumManager.sharkArrayUpdate(this);
-
+		if(GRID_IMPLEMENTATION){
+			AquariumManager.sharkGridUpdate(this);
+		}
 
 		// Check if our shark is about to go out of bounds of the camera
 		string outofbound = OutOfBounds ();
@@ -76,7 +87,14 @@ public class Shark : Agent {
 
 		// Neighbor sharks are also used for the wander component
 		List<Shark> neighbors = new List<Shark> ();
-		FindNeighbors (neighbors);
+
+		if(BRUTE_FORCE){
+			FindNeighborsBrute (neighbors);
+		}
+
+		if(GRID_IMPLEMENTATION){
+			FindNeighborsGrid (neighbors);
+		}
 
 		// Check if the shark should still be wandering
 		if (SharkWander > 0){
@@ -93,7 +111,12 @@ public class Shark : Agent {
 		}
 			
 		List<Fish> prey = new List<Fish>();
-		FindPrey (prey);
+		if(BRUTE_FORCE){
+			FindPreyBrute (prey);
+		}
+		if(GRID_IMPLEMENTATION){
+			FindPreyGrid(prey);
+		}
 
 		PreyBiteReady (prey);
 
@@ -195,44 +218,11 @@ public class Shark : Agent {
 		}
 	}
 
-	void FindPrey(List<Fish> prey){
+	void FindPreyBrute(List<Fish> prey){
 		// Identical to FindNeighbors from Fish.cs
 		// Currently iterates through the entire list of fish within our scene
 		// and finds the ones within a certain radius of the fish
 		// and then appends them to the neighbors list if they are within the radius.
-
-		/*
-		Debug.Log(x_coord);
-		Debug.Log (y_coord);
-		Node currentCell = AquariumManager.fishArray [x_coord, y_coord];
-		while (currentCell != null){
-			prey.Add (currentCell.data.GetComponent<Fish> ());
-			currentCell = currentCell.Next;
-		}*/
-
-		/*
-		prey.AddRange (AquariumManager.fishGrid [x_coord, y_coord]);
-
-		if (x_coord > 0)
-			prey.AddRange (AquariumManager.fishGrid [x_coord - 1, y_coord]);
-		if (x_coord < (AquariumManager.HORIZONTAL_SQUARE_COUNT - 1))
-			prey.AddRange (AquariumManager.fishGrid [x_coord + 1, y_coord]);
-		if (y_coord > 0)
-			prey.AddRange (AquariumManager.fishGrid [x_coord, y_coord - 1]);
-		if (y_coord < (AquariumManager.VERTICAL_SQUARE_COUNT - 1))
-			prey.AddRange (AquariumManager.fishGrid [x_coord, y_coord + 1]);
-		if (x_coord > 0 && y_coord > 0)
-			prey.AddRange (AquariumManager.fishGrid [x_coord-1, y_coord-1]);
-		if (x_coord < (AquariumManager.HORIZONTAL_SQUARE_COUNT - 1) && y_coord > 0)
-			prey.AddRange (AquariumManager.fishGrid [x_coord+1, y_coord-1]);
-		if (x_coord < (AquariumManager.HORIZONTAL_SQUARE_COUNT - 1) && 
-			y_coord < (AquariumManager.VERTICAL_SQUARE_COUNT - 1))
-			prey.AddRange (AquariumManager.fishGrid [x_coord+1, y_coord+1]);
-		if (x_coord > 0 && y_coord < (AquariumManager.VERTICAL_SQUARE_COUNT - 1))
-			prey.AddRange (AquariumManager.fishGrid [x_coord-1, y_coord+1]);
-
-		return;*/
-
 
 		foreach(GameObject fish in GameObject.FindGameObjectsWithTag("Fish")){
 			float distance = Vector3.Distance (this.transform.position, fish.transform.position);
@@ -240,13 +230,61 @@ public class Shark : Agent {
 				prey.Add (fish.GetComponent<Fish>());
 			}
 		}
+	}
 
-		/*
-		string coordinates = x_coord.ToString () + y_coord.ToString ();
+	void FindPreyGrid(List<Fish> prey){
+		List<int> cell_list =AquariumManager.fishGrid[x_coord,y_coord];
 
-		if (AquariumManager.fishDict.ContainsKey(coordinates) && AquariumManager.fishDict[coordinates].Count > 0){
-			prey.Add (AquariumManager.fishDict [coordinates].Values.ToList());
-		}*/
+		int[] xindices = new int[3]{x_coord-1, x_coord, x_coord + 1};
+		int[] yindices = new int[3]{y_coord-1, y_coord, y_coord + 1}; 
+		foreach (int x in xindices){
+			if (x >= 0 && x < AquariumManager.HORIZONTAL_SQUARE_COUNT){
+				foreach (int y in yindices){
+					if (y >= 0 && y < AquariumManager.VERTICAL_SQUARE_COUNT){
+						foreach(int id in AquariumManager.fishGrid[x,y]){
+							prey.Add (Fish.ALL_FISH[id]);
+						}
+					}
+				}
+			}
+		}
+	}
+
+	void FindNeighborsBrute(List<Shark> neighbors){
+		// Currently iterates through the entire list of shark within our scene
+		// and finds the ones within a certain radius of the shark
+		// and then appends them to the neighbors list if they are within the radius.
+		foreach(GameObject shark in GameObject.FindGameObjectsWithTag("Shark")){
+			float distance = Vector3.Distance (this.transform.position, shark.transform.position);
+			if (distance != 0 && distance < TEMP_RADIUS){
+				neighbors.Add (shark.GetComponent<Shark>());
+			}
+		}
+	}
+
+	void FindNeighborsGrid(List<Shark> neighbors){
+		int count = 0;
+		List<int> cell_list =AquariumManager.sharkGrid[x_coord,y_coord];
+		foreach(int id in cell_list){
+			if (id != _ID){
+				neighbors.Add (ALL_SHARKS[id]);
+			}
+		}
+
+		int[] xindices = new int[3]{x_coord-1, x_coord, x_coord + 1};
+		int[] yindices = new int[3]{y_coord-1, y_coord, y_coord + 1}; 
+		foreach (int x in xindices){
+			if (x >= 0 && x < AquariumManager.HORIZONTAL_SQUARE_COUNT){
+				foreach (int y in yindices){
+					if (y >= 0 && y < AquariumManager.VERTICAL_SQUARE_COUNT &&
+					(x != x_coord || y != y_coord)){
+						foreach(int id in AquariumManager.sharkGrid[x,y]){
+							neighbors.Add (ALL_SHARKS[id]);
+						}
+					}
+				}
+			}
+		}
 	}
 
 	void PreyBiteReady(List<Fish> prey){
@@ -274,13 +312,8 @@ public class Shark : Agent {
 				poorfish.GetComponent<Fish> ().getY ()].Remove (poorfish.GetComponent<Fish> ());
 			AquariumManager.fishDict [poorfish.GetComponent<Fish> ().getX ().ToString () +
 			poorfish.GetComponent<Fish> ().getY ().ToString ()].Remove (poorfish.GetComponent<Fish> ().getID ());*/
-			Node node = poorfish.GetComponent<Fish> ().GetNode;
-			if(node.Previous == null){
-				AquariumManager.fishArray [poorfish.GetComponent<Fish> ().getX (),
-					poorfish.GetComponent<Fish> ().getY ()] = node.Next;
-			}
-			node.removeSelf();
-
+			AquariumManager.fishGrid[poorfish.GetComponent<Fish> ().getX (),
+				poorfish.GetComponent<Fish> ().getY ()].Remove (poorfish.GetComponent<Fish> ().ID);
 			Destroy (poorfish);
 			Debug.Log ("A fish has been eaten!");
 			Fish.FISH_COUNT--;
@@ -290,17 +323,7 @@ public class Shark : Agent {
 		}
 	}
 
-	void FindNeighbors(List<Shark> neighbors){
-		// Currently iterates through the entire list of shark within our scene
-		// and finds the ones within a certain radius of the shark
-		// and then appends them to the neighbors list if they are within the radius.
-		foreach(GameObject shark in GameObject.FindGameObjectsWithTag("Shark")){
-			float distance = Vector3.Distance (this.transform.position, shark.transform.position);
-			if (distance != 0 && distance < TEMP_RADIUS){
-				neighbors.Add (shark.GetComponent<Shark>());
-			}
-		}
-	}
+
 
 	Vector2 Hunt(List<Fish> prey){
 		Vector2 coherence = Cohere (prey) * COHERE_WEIGHT;
@@ -381,18 +404,10 @@ public class Shark : Agent {
 		return(steer);
 	}
 
-	public int getID(){
-		return(_ID);
-	}
-
-	public Node GetNode{
+	public int ID{
 		get{
-			return(node);
+		return(_ID);
 		}
-	}
-
-	public void setNode(Node newNode){
-		node = newNode;
 	}
 
 }

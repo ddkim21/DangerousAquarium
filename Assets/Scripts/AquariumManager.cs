@@ -22,48 +22,26 @@ public class AquariumManager : MonoBehaviour {
 	public static int VERTICAL_SQUARE_COUNT = 6;
 	public static int HORIZONTAL_SQUARE_COUNT = 10;
 
-	public static List<Fish> [,] fishGrid;
-	public static List<Shark> [,] sharkGrid;/*
-	public static Dictionary<string, Dictionary<int, Fish>> fishDict;
-	public static Dictionary<string, Dictionary<int, Shark>> sharkDict;*/
-
-	public static List<int>[,] fishIntGrid;
-
-	public static Node[,] fishArray;
-	public static Node[,] sharkArray;
+	public static List<int>[,] fishGrid;
+	public static List<int>[,] sharkGrid;
 
 	void Start (){
-		fishArray = new Node[HORIZONTAL_SQUARE_COUNT, VERTICAL_SQUARE_COUNT];
-		sharkArray = new Node[HORIZONTAL_SQUARE_COUNT, VERTICAL_SQUARE_COUNT];
-		Debug.Log("This is also being run");
-		for (int x = 0; x < HORIZONTAL_SQUARE_COUNT; x++)
-			for (int y = 0; y < VERTICAL_SQUARE_COUNT; y++) {
-				fishArray [x, y] = null;
-				sharkArray [x, y] = null;
-		}
 
-		/*
-		fishDict = new Dictionary<string, Dictionary<int, Fish>>();
-		sharkDict = new Dictionary<string, Dictionary<int, Shark>> ();*/
-
-		fishGrid = new List<Fish>[HORIZONTAL_SQUARE_COUNT,VERTICAL_SQUARE_COUNT];
-		sharkGrid = new List<Shark>[HORIZONTAL_SQUARE_COUNT, VERTICAL_SQUARE_COUNT];
-
-		fishIntGrid = new List<int>[HORIZONTAL_SQUARE_COUNT, VERTICAL_SQUARE_COUNT];
+		fishGrid = new List<int>[HORIZONTAL_SQUARE_COUNT, VERTICAL_SQUARE_COUNT];
+		sharkGrid = new List<int>[HORIZONTAL_SQUARE_COUNT,VERTICAL_SQUARE_COUNT];
 
 		for (int x = 0; x < HORIZONTAL_SQUARE_COUNT; x++)
 			for (int y = 0; y < VERTICAL_SQUARE_COUNT; y++) {
-				fishGrid [x, y] = new List<Fish> ();
-				sharkGrid [x, y] = new List<Shark> ();
-				fishIntGrid[x, y] = new List<int>();
+				fishGrid[x, y] = new List<int>();
+				sharkGrid[x,y] = new List<int>();
 			}
 	}
 
 	void Update() {
 		print(1.0f / Time.deltaTime);
+		//Update text for fish and shark counters in the Aquarium
 		fish_counter.GetComponent<UnityEngine.UI.Text>().text = Fish.FISH_COUNT.ToString() + " Fish";
 		shark_counter.GetComponent<UnityEngine.UI.Text>().text = Shark.SHARK_COUNT.ToString() + " Sharks";
-
 	}
 
 	public void AddTenFish(){
@@ -93,6 +71,7 @@ public class AquariumManager : MonoBehaviour {
 				BACKGROUND_HALF_HEIGHT - buffer);
 			Vector3 position = new Vector3 (randomX, randomY, -1);
 			GameObject thisShark = Instantiate (shark, position, Quaternion.identity);
+			thisShark.tag = "Shark";
 			thisShark.transform.parent = sharks.transform;
 			count--;
 		}
@@ -113,9 +92,9 @@ public class AquariumManager : MonoBehaviour {
 
 		xposition += BACKGROUND_HALF_WIDTH;
 		yposition += BACKGROUND_HALF_HEIGHT;
-
 		int grid_x = (int)(xposition / SQUARE_LENGTH);
 		int grid_y = 0;
+
 		if (0 <= yposition && yposition < ALTERED_SQUARE_LENGTH)
 			grid_y = 0;
 		else if (yposition >= NORMAL_SQUARE_COUNT * SQUARE_LENGTH + ALTERED_SQUARE_LENGTH)
@@ -124,14 +103,15 @@ public class AquariumManager : MonoBehaviour {
 			grid_y = (int)((yposition - ALTERED_SQUARE_LENGTH) / SQUARE_LENGTH);
 			grid_y++;
 		}
+
 		if (fish.getX() == -1){
-			fishGrid [grid_x, grid_y].Add (fish);
+			fishGrid [grid_x, grid_y].Add (fish.ID);
 			fish.setX (grid_x);
 			fish.setY (grid_y);
 		}
 		else if (grid_x != fish.getX() || grid_y != fish.getY()){
-			fishGrid [fish.getX (), fish.getY ()].Remove (fish);
-			fishGrid [grid_x, grid_y].Add (fish);
+			fishGrid [fish.getX (), fish.getY ()].Remove (fish.ID);
+			fishGrid [grid_x, grid_y].Add (fish.ID);
 			fish.setX (grid_x);
 			fish.setY (grid_y);
 		}
@@ -143,9 +123,9 @@ public class AquariumManager : MonoBehaviour {
 
 		xposition += BACKGROUND_HALF_WIDTH;
 		yposition += BACKGROUND_HALF_HEIGHT;
-
 		int grid_x = (int)(xposition / SQUARE_LENGTH);
 		int grid_y = 0;
+
 		if (0 <= yposition && yposition < ALTERED_SQUARE_LENGTH)
 			grid_y = 0;
 		else if (yposition >= NORMAL_SQUARE_COUNT * SQUARE_LENGTH + ALTERED_SQUARE_LENGTH)
@@ -154,245 +134,17 @@ public class AquariumManager : MonoBehaviour {
 			grid_y = (int)((yposition - ALTERED_SQUARE_LENGTH) / SQUARE_LENGTH);
 			grid_y++;
 		}
+
 		if (shark.getX() == -1){
-			sharkGrid [grid_x, grid_y].Add (shark);
+			sharkGrid [grid_x, grid_y].Add (shark.ID);
 			shark.setX (grid_x);
 			shark.setY (grid_y);
 		}
 		else if (grid_x != shark.getX() || grid_y != shark.getY()){
-			sharkGrid [shark.getX (), shark.getY ()].Remove (shark);
-			sharkGrid [grid_x, grid_y].Add (shark);
+			sharkGrid [shark.getX (), shark.getY ()].Remove (shark.ID);
+			sharkGrid [grid_x, grid_y].Add (shark.ID);
 			shark.setX (grid_x);
 			shark.setY (grid_y);
 		}
 	}
-
-	public static void fishIntGridUpdate(Fish fish){
-		float xposition = fish.transform.position.x;
-		float yposition = fish.transform.position.y;
-
-		xposition += BACKGROUND_HALF_WIDTH;
-		yposition += BACKGROUND_HALF_HEIGHT;
-		int grid_x = (int)(xposition / SQUARE_LENGTH);
-		int grid_y = 0;
-
-		if (0 <= yposition && yposition < ALTERED_SQUARE_LENGTH)
-			grid_y = 0;
-		else if (yposition >= NORMAL_SQUARE_COUNT * SQUARE_LENGTH + ALTERED_SQUARE_LENGTH)
-			grid_y = NORMAL_SQUARE_COUNT + 1;
-		else {
-			grid_y = (int)((yposition - ALTERED_SQUARE_LENGTH) / SQUARE_LENGTH);
-			grid_y++;
-		}
-
-		if (fish.getX() == -1){
-			fishIntGrid [grid_x, grid_y].Add (fish.ID);
-			fish.setX (grid_x);
-			fish.setY (grid_y);
-		}
-		else if (grid_x != fish.getX() || grid_y != fish.getY()){
-			fishIntGrid [fish.getX (), fish.getY ()].Remove (fish.ID);
-			fishIntGrid [grid_x, grid_y].Add (fish.ID);
-			fish.setX (grid_x);
-			fish.setY (grid_y);
-		}
-	}
-
-	/*
-	public static void fishDictUpdate(Fish fish){
-		float xposition = fish.transform.position.x;
-		float yposition = fish.transform.position.y;
-
-		xposition += BACKGROUND_HALF_WIDTH;
-		yposition += BACKGROUND_HALF_HEIGHT;
-
-		int grid_x = (int)(xposition / SQUARE_LENGTH);
-		int grid_y = 0;
-		if (0 <= yposition && yposition < ALTERED_SQUARE_LENGTH)
-			grid_y = 0;
-		else if (yposition >= NORMAL_SQUARE_COUNT * SQUARE_LENGTH + ALTERED_SQUARE_LENGTH)
-			grid_y = NORMAL_SQUARE_COUNT + 1;
-		else {
-			grid_y = (int)((yposition - ALTERED_SQUARE_LENGTH) / SQUARE_LENGTH);
-			grid_y++;
-		}
-
-		string coordinates = grid_x.ToString () + grid_y.ToString ();
-
-		if (fish.getX() == -1){
-			if (!fishDict.ContainsKey(coordinates)){
-				Dictionary<int, Fish> fishes = new Dictionary<int,Fish>();
-				fishes.Add (fish.getID(), fish);
-				fishDict.Add (coordinates, fishes);
-			}
-			else {
-				fishDict [coordinates].Add (fish.getID(),fish);
-			}
-			fish.setX (grid_x);
-			fish.setY (grid_y);
-		}
-
-		else if (grid_x != fish.getX() || grid_y != fish.getY()){
-			string oldcoordinates = fish.getX ().ToString () + fish.getY ().ToString ();
-			fishDict [oldcoordinates].Remove (fish.getID ());
-			if (fishDict[oldcoordinates].Count == 0){
-				fishDict.Remove (oldcoordinates);
-			}
-			if (!fishDict.ContainsKey(coordinates)){
-				Dictionary<int, Fish> fishes = new Dictionary<int,Fish>();
-				fishes.Add (fish.getID(), fish);
-				fishDict.Add (coordinates, fishes);
-			}
-			else {
-				fishDict [coordinates].Add (fish.getID (), fish);
-			}
-			fish.setX (grid_x);
-			fish.setY (grid_y);
-		}
-	}
-
-	public static void sharkDictUpdate(Shark shark){
-		float xposition = shark.transform.position.x;
-		float yposition = shark.transform.position.y;
-
-		xposition += BACKGROUND_HALF_WIDTH;
-		yposition += BACKGROUND_HALF_HEIGHT;
-
-		int grid_x = (int)(xposition / SQUARE_LENGTH);
-		int grid_y = 0;
-		if (0 <= yposition && yposition < ALTERED_SQUARE_LENGTH)
-			grid_y = 0;
-		else if (yposition >= NORMAL_SQUARE_COUNT * SQUARE_LENGTH + ALTERED_SQUARE_LENGTH)
-			grid_y = NORMAL_SQUARE_COUNT + 1;
-		else {
-			grid_y = (int)((yposition - ALTERED_SQUARE_LENGTH) / SQUARE_LENGTH);
-			grid_y++;
-		}
-
-		string coordinates = grid_x.ToString () + grid_y.ToString ();
-
-		if (shark.getX() == -1){
-			if (!sharkDict.ContainsKey(coordinates)){
-				Dictionary<int, Shark> sharks = new Dictionary<int,Shark>();
-				sharks.Add (shark.getID(), shark);
-				sharkDict.Add (coordinates, sharks);
-			}
-			else {
-				sharkDict [coordinates].Add (shark.getID(),shark);
-			}
-			shark.setX (grid_x);
-			shark.setY (grid_y);
-		}
-
-		else if (grid_x != shark.getX() || grid_y != shark.getY()){
-			string oldcoordinates = shark.getX ().ToString () + shark.getY ().ToString ();
-			sharkDict [oldcoordinates].Remove (shark.getID ());
-			if (sharkDict[oldcoordinates].Count == 0){
-				sharkDict.Remove (oldcoordinates);
-			}
-			if (!sharkDict.ContainsKey(coordinates)){
-				Dictionary<int, Shark> sharks = new Dictionary<int,Shark>();
-				sharks.Add (shark.getID(), shark);
-				sharkDict.Add (coordinates, sharks);
-			}
-			else {
-				sharkDict [coordinates].Add (shark.getID (), shark);
-			}
-			shark.setX (grid_x);
-			shark.setY (grid_y);
-		}
-	}*/
-
-	public static void fishArrayUpdate(Fish fish){
-		float xposition = fish.transform.position.x;
-		float yposition = fish.transform.position.y;
-
-		xposition += BACKGROUND_HALF_WIDTH;
-		yposition += BACKGROUND_HALF_HEIGHT;
-
-		int grid_x = (int)(xposition / SQUARE_LENGTH);
-		int grid_y = 0;
-		if (0 <= yposition && yposition < ALTERED_SQUARE_LENGTH)
-			grid_y = 0;
-		else if (yposition >= NORMAL_SQUARE_COUNT * SQUARE_LENGTH + ALTERED_SQUARE_LENGTH)
-			grid_y = NORMAL_SQUARE_COUNT + 1;
-		else {
-			grid_y = (int)((yposition - ALTERED_SQUARE_LENGTH) / SQUARE_LENGTH);
-			grid_y++;
-		}
-		if (fish.getX() == -1){
-			Node node = new Node (fish.gameObject);
-			fish.setNode (node);
-			Node gridTarget = fishArray [grid_x, grid_y];
-			if (gridTarget != null){
-				gridTarget.setPrev (node);
-			}
-			node.setNext (gridTarget);
-			fishArray [grid_x, grid_y] = node;
-			fish.setX (grid_x);
-			fish.setY (grid_y);
-		}
-		else if (grid_x != fish.getX() || grid_y != fish.getY()){
-			Node node = fish.GetNode;
-			if (node.Previous == null){
-				fishArray [fish.getX (), fish.getY ()] = node.Next;
-			}
-			node.removeSelf ();
-			Node gridTarget = fishArray [grid_x, grid_y];
-			if (gridTarget != null){
-				gridTarget.setPrev (node);
-			}
-			node.setNext (gridTarget);
-			fishArray [grid_x, grid_y] = node;
-			fish.setX (grid_x);
-			fish.setY (grid_y);
-		}
-	}
-
-	public static void sharkArrayUpdate(Shark shark){
-		float xposition = shark.transform.position.x;
-		float yposition = shark.transform.position.y;
-
-		xposition += BACKGROUND_HALF_WIDTH;
-		yposition += BACKGROUND_HALF_HEIGHT;
-
-		int grid_x = (int)(xposition / SQUARE_LENGTH);
-		int grid_y = 0;
-		if (0 <= yposition && yposition < ALTERED_SQUARE_LENGTH)
-			grid_y = 0;
-		else if (yposition >= NORMAL_SQUARE_COUNT * SQUARE_LENGTH + ALTERED_SQUARE_LENGTH)
-			grid_y = NORMAL_SQUARE_COUNT + 1;
-		else {
-			grid_y = (int)((yposition - ALTERED_SQUARE_LENGTH) / SQUARE_LENGTH);
-			grid_y++;
-		}
-		if (shark.getX() == -1){
-			Node node = new Node (shark.gameObject);
-			shark.setNode (node);
-			Node gridTarget = sharkArray [grid_x, grid_y];
-			if (gridTarget != null){
-				gridTarget.setPrev (node);
-			}
-			node.setNext (gridTarget);
-			sharkArray [grid_x, grid_y] = node;
-			shark.setX (grid_x);
-			shark.setY (grid_y);
-		}
-		else if (grid_x != shark.getX() || grid_y != shark.getY()){
-			Node node = shark.GetNode;
-			if (node.Previous == null){
-				sharkArray [shark.getX (), shark.getY ()] = node.Next;
-			}
-			node.removeSelf ();
-			Node gridTarget = sharkArray [grid_x, grid_y];
-			if (gridTarget != null){
-				gridTarget.setPrev (node);
-			}
-			node.setNext (gridTarget);
-			sharkArray [grid_x, grid_y] = node;
-			shark.setX (grid_x);
-			shark.setY (grid_y);
-		}
-	}
-
 }
