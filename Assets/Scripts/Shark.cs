@@ -29,9 +29,10 @@ public class Shark : Agent {
 	public GameObject blood;
 
 	public static bool BRUTE_FORCE = false;
-	public static bool GRID_IMPLEMENTATION = true;
-	public static bool K_NEAREST_NEIGHBORS_IMPLEMENTATION = false;
-	public static int K_NEAREST_NEIGHBORS = 5;
+	public static bool GRID_IMPLEMENTATION = false;
+	public static bool K_NEIGHBORS_GRID_IMPLEMENTATION = false;
+	public static bool KD_TREE_IMPLEMENTATION = true;
+	public static int K_NEAREST_NEIGHBORS = 6;
 
 	public static List<Shark> ALL_SHARKS;
 	public static bool STARTED = false;
@@ -95,10 +96,14 @@ public class Shark : Agent {
 		}
 
 		if(GRID_IMPLEMENTATION){
-			if(K_NEAREST_NEIGHBORS_IMPLEMENTATION)
+			if(K_NEIGHBORS_GRID_IMPLEMENTATION)
 				FindNeighborsGridKNN(neighbors);
 			else
 				FindNeighborsGrid (neighbors);
+		}
+
+		if(KD_TREE_IMPLEMENTATION){
+			FindNeighborsKDTree(neighbors);
 		}
 
 		// Check if the shark should still be wandering
@@ -121,10 +126,14 @@ public class Shark : Agent {
 		}
 
 		if(GRID_IMPLEMENTATION){
-			if(K_NEAREST_NEIGHBORS_IMPLEMENTATION)
+			if(K_NEIGHBORS_GRID_IMPLEMENTATION)
 				FindPreyGridKNN(prey);
 			else
 				FindPreyGrid(prey);
+		}
+
+		if(KD_TREE_IMPLEMENTATION){
+			FindPreyKDTree(prey);
 		}
 
 		PreyBiteReady (prey);
@@ -300,6 +309,27 @@ public class Shark : Agent {
 		 
 	}
 
+	void FindPreyKDTree(List<Fish> prey){
+		// See comments of FindNeighborsKDTree method of fish class.
+		List<int> neighborIDs = new List<int>();
+		Node Tree = AquariumManager.fishTree;
+		float[] position = new float[] {this.transform.position.x, this.transform.position.y};
+		int count = 0;
+		while (count < K_NEAREST_NEIGHBORS){
+			ID fishid = KDTree.nearestNeighbor(Tree, position, neighborIDs);
+			if (fishid != null){
+				neighborIDs.Add(fishid.id);
+				if(Fish.ALL_FISH[fishid.id] != null){
+					prey.Add(Fish.ALL_FISH[fishid.id]);
+					count++;
+				}
+			}
+			else {
+				return;
+			}
+		}
+	}
+
 	void FindNeighborsBrute(List<Shark> neighbors){
 		// Currently iterates through the entire list of shark within our scene
 		// and finds the ones within a certain radius of the shark
@@ -378,6 +408,26 @@ public class Shark : Agent {
 
 	}
 
+	void FindNeighborsKDTree(List<Shark> neighbors){
+		// See comments of FindNeighborsKDTree method of fish class.
+		List<int> neighborIDs = new List<int>();
+		Node Tree = AquariumManager.sharkTree;
+		float[] position = new float[] {this.transform.position.x, this.transform.position.y};
+		int count = 0;
+		while (count < K_NEAREST_NEIGHBORS){
+			ID sharkid = KDTree.nearestNeighbor(Tree, position, neighborIDs);
+			if (sharkid != null){
+				neighborIDs.Add(sharkid.id);
+				if(sharkid.id != _ID)
+					neighbors.Add(ALL_SHARKS[sharkid.id]);
+					count++;
+			}
+			else {
+				return;
+			}
+		}
+	}
+
 	void PreyBiteReady(List<Fish> prey){
 		float distance = float.MaxValue;
 		GameObject poorfish = null;
@@ -406,6 +456,11 @@ public class Shark : Agent {
 			if (GRID_IMPLEMENTATION){
 				AquariumManager.fishGrid[poorfish.GetComponent<Fish> ().getX (),
 				poorfish.GetComponent<Fish> ().getY ()].Remove (poorfish.GetComponent<Fish> ().ID);
+			}
+			if (KD_TREE_IMPLEMENTATION){
+				float [] coords = new float[]{poorfish.GetComponent<Fish> ().getX (),
+					poorfish.GetComponent<Fish> ().getY ()};
+				AquariumManager.fishTree = KDTree.deleteNode(AquariumManager.fishTree, coords);
 			}
 			Destroy (poorfish);
 			Debug.Log ("A fish has been eaten!");

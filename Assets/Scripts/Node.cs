@@ -2,39 +2,28 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+[System.Serializable]
 public class Node{
-	public GameObject Content;
-	public Node Previous;
-	public Node Next;
+	public float[] point = new float[KDTree.dimension]; 
 
-	public Node(GameObject content){
-		Content = content;
-		Previous = null;
-		Next = null;
-	}
+	public int ID = -1;
+	public Node left;
+	public Node right;
 
-	public void setPrev(Node node){
-		Previous = node;
-	}
-
-	public void setNext(Node node){
-		Next = node;
-	}
-
-	public GameObject data{
-		get{
-			return(Content);
+	public Node(float [] arr, int fishid){
+		for(int i = 0; i < KDTree.dimension; i++){
+			point[i] = arr[i];
 		}
+		ID = fishid;
+		left = null;
+		right = null;
 	}
 
-	public void removeSelf(){
-		if (Previous != null){
-			Previous.setNext(Next);
-		}
-		if (Next != null){
-			Next.setPrev(Previous);
-		}
-		Previous = null;
-		Next = null;
+	public void setID(int id){
+		ID = id;
 	}
+
 }
+ 
+
+

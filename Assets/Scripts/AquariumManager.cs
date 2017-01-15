@@ -25,7 +25,31 @@ public class AquariumManager : MonoBehaviour {
 	public static List<int>[,] fishGrid;
 	public static List<int>[,] sharkGrid;
 
+	public static Node fishTree;
+	public static Node sharkTree;
+
 	void Start (){
+		/*
+		Node root = null;
+		List<float[]> array = new List<float[]> ();
+		array.Add(new float[] {30f,40f});
+		array.Add(new float[] {5f,25f});
+		array.Add(new float[] {70f,70f});
+		array.Add(new float[] {10f,12f});
+		array.Add(new float[] {50f,30f});
+		array.Add(new float[] {35f,45f});
+
+		for (int i = 0; i < 6; i++)
+			root = KDTree.insert(root, array[i], i);
+		Node newRoot = ObjectCopier.Clone(root);
+		root = KDTree.deleteNode(root, array[0]); 
+		print(root.point[0].ToString() + " " + root.point[1].ToString());
+		print(newRoot.point[0].ToString() + " " + newRoot.point[1].ToString());
+		int tester = KDTree.nearestNeighbor(newRoot, new float[] {31f,41f});
+		print(tester);*/
+
+		fishTree = null;
+		sharkTree = null;
 
 		fishGrid = new List<int>[HORIZONTAL_SQUARE_COUNT, VERTICAL_SQUARE_COUNT];
 		sharkGrid = new List<int>[HORIZONTAL_SQUARE_COUNT,VERTICAL_SQUARE_COUNT];
@@ -40,6 +64,23 @@ public class AquariumManager : MonoBehaviour {
 	void Update() {
 		print(1.0f / Time.deltaTime);
 		//Update text for fish and shark counters in the Aquarium
+
+		// Build fish KD Tree.
+		fishTree = null;
+
+		foreach(GameObject fish in GameObject.FindGameObjectsWithTag("Fish")){
+			fishTree = KDTree.insert(fishTree, new float[] {fish.transform.position.x,
+			fish.transform.position.y}, fish.GetComponent<Fish>().ID);
+		}
+
+		// Build shark KD Tree.
+		sharkTree = null;
+
+		foreach(GameObject shark in GameObject.FindGameObjectsWithTag("Shark")){
+			sharkTree = KDTree.insert(sharkTree, new float[] {shark.transform.position.x,
+			shark.transform.position.y}, shark.GetComponent<Shark>().ID);
+		}
+
 		fish_counter.GetComponent<UnityEngine.UI.Text>().text = Fish.FISH_COUNT.ToString() + " Fish";
 		shark_counter.GetComponent<UnityEngine.UI.Text>().text = Shark.SHARK_COUNT.ToString() + " Sharks";
 	}

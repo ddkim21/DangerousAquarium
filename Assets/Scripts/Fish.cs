@@ -12,10 +12,10 @@ public class Fish : Agent {
 
 	public static float COHERE_WEIGHT = (4f);
 	public static float ALIGN_WEIGHT = (4f);
-	public static float SEPERATE_WEIGHT = (7f);
+	public static float SEPERATE_WEIGHT = (6f);
 	public static float ESCAPE_WEIGHT = (27.5f);
 	public static float WALL_WEIGHT = 12.5f;
-	public static float SEPERATION_RADIUS = 3.5f;
+	public static float SEPERATION_RADIUS = 2f;
 	// Temp radius, used for finding neighbors
 	// will be replaced by K Nearest Neighbors implementation
 	public static float TEMP_RADIUS = 15f;
@@ -32,9 +32,10 @@ public class Fish : Agent {
 	//Lastly, our count of fish in order to keep track of the number of fish
 	public static int FISH_COUNT = 0;
 	public static bool BRUTE_FORCE = false;
-	public static bool GRID_IMPLEMENTATION = true;
-	public static bool K_NEAREST_NEIGHBORS_IMPLEMENTATION = false;
-	public static int K_NEAREST_NEIGHBORS = 5;
+	public static bool GRID_IMPLEMENTATION = false;
+	public static bool K_NEIGHBORS_GRID_IMPLEMENTATION = false;
+	public static bool KD_TREE_IMPLEMENTATION = true;
+	public static int K_NEAREST_NEIGHBORS = 6;
 
 	public static List<Fish> ALL_FISH;
 	public static bool STARTED = false;
@@ -107,7 +108,7 @@ public class Fish : Agent {
 		}
 
 		if(GRID_IMPLEMENTATION){
-			if(K_NEAREST_NEIGHBORS_IMPLEMENTATION){
+			if(K_NEIGHBORS_GRID_IMPLEMENTATION){
 				FindNeighborsGridKNN(neighbors);
 				FindPredatorsGridKNN(predators);
 			}
@@ -115,6 +116,11 @@ public class Fish : Agent {
 				FindNeighborsGrid(neighbors);
 				FindPredatorsGrid(predators);
 			}
+		}
+
+		if(KD_TREE_IMPLEMENTATION){
+			FindNeighborsKDTree(neighbors);
+			FindPredatorsKDTree(predators);
 		}
 
 		//Parallel to above for finding sharks.
@@ -337,8 +343,6 @@ public class Fish : Agent {
 		return(steer);
 	}
 
-
-
 	void FindNeighborsBrute(List<Fish> neighbors){
 		foreach(GameObject fish in GameObject.FindGameObjectsWithTag("Fish")){
 			float distance = Vector3.Distance (this.transform.position, fish.transform.position);
@@ -422,6 +426,32 @@ public class Fish : Agent {
 
 	}
 
+	void FindNeighborsKDTree(List<Fish> neighbors){
+		//This list is used to save the nearest neighbors found so far
+		//to ensure that we get unique KNNs.
+		List<int> neighborIDs = new List<int>();
+		Node Tree = AquariumManager.fishTree;
+		float[] position = new float[] {this.transform.position.x, this.transform.position.y};
+		int count = 0;
+		while (count < K_NEAREST_NEIGHBORS){
+			//Find the nearest neighbor (may return null)
+			ID fishid = KDTree.nearestNeighbor(Tree, position, neighborIDs);
+			if (fishid != null){
+				neighborIDs.Add(fishid.id);
+				if(fishid.id != _ID){
+				//Ensure that the nearest neighbor found is not itself.
+					if(ALL_FISH[fishid.id] != null){
+						neighbors.Add(ALL_FISH[fishid.id]);
+						count++;
+					}
+				}
+			}
+			else {
+				return;
+			}
+		}
+	}
+
 	void FindPredatorsBrute(List<Shark> predators){
 		// Works exactly the same way as FindNeighbors, except for sharks
 		foreach(GameObject shark in GameObject.FindGameObjectsWithTag("Shark")){
@@ -489,6 +519,25 @@ public class Fish : Agent {
 			count++;
 		}
 
+	}
+
+	void FindPredatorsKDTree(List<Shark> predators){
+		// See comments of FindNeighborsKDTree method of fish class.
+		List<int> neighborIDs = new List<int>();
+		Node Tree = AquariumManager.sharkTree;
+		float[] position = new float[] {this.transform.position.x, this.transform.position.y};
+		int count = 0;
+		while (count < K_NEAREST_NEIGHBORS){
+			ID sharkid = KDTree.nearestNeighbor(Tree, position, neighborIDs);
+			if (sharkid != null){
+				neighborIDs.Add(sharkid.id);
+				predators.Add(Shark.ALL_SHARKS[sharkid.id]);
+				count++;
+			}
+			else {
+				return;
+			}
+		}
 	}
 
 	Vector2 Flock(List<Fish> neighbors){
