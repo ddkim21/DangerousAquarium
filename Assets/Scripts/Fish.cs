@@ -12,10 +12,10 @@ public class Fish : Agent {
 
 	public static float COHERE_WEIGHT = (4f);
 	public static float ALIGN_WEIGHT = (4f);
-	public static float SEPERATE_WEIGHT = (6f);
+	public static float SEPERATE_WEIGHT = (7f);
 	public static float ESCAPE_WEIGHT = (27.5f);
 	public static float WALL_WEIGHT = 12.5f;
-	public static float SEPERATION_RADIUS = 3f;
+	public static float SEPERATION_RADIUS = 3.5f;
 	// Temp radius, used for finding neighbors
 	// will be replaced by K Nearest Neighbors implementation
 	public static float TEMP_RADIUS = 15f;
@@ -33,6 +33,8 @@ public class Fish : Agent {
 	public static int FISH_COUNT = 0;
 	public static bool BRUTE_FORCE = false;
 	public static bool GRID_IMPLEMENTATION = true;
+	public static bool K_NEAREST_NEIGHBORS_IMPLEMENTATION = false;
+	public static int K_NEAREST_NEIGHBORS = 5;
 
 	public static List<Fish> ALL_FISH;
 	public static bool STARTED = false;
@@ -105,8 +107,14 @@ public class Fish : Agent {
 		}
 
 		if(GRID_IMPLEMENTATION){
-			FindNeighborsGrid(neighbors);
-			FindPredatorsGrid(predators);
+			if(K_NEAREST_NEIGHBORS_IMPLEMENTATION){
+				FindNeighborsGridKNN(neighbors);
+				FindPredatorsGridKNN(predators);
+			}
+			else{
+				FindNeighborsGrid(neighbors);
+				FindPredatorsGrid(predators);
+			}
 		}
 
 		//Parallel to above for finding sharks.
@@ -341,6 +349,10 @@ public class Fish : Agent {
 	}
 
 	void FindNeighborsGrid(List<Fish> neighbors){
+		//Returns all fish in neighboring cells. 
+		//A neighboring cell is either the cell the fish is currently in, or a cell that is adjacent to
+		//the cell the fish is currently in. 
+		//This is done through accessing the 2d list of int lists in Aquarium manager.
 		List<int> cell_list =AquariumManager.fishGrid[x_coord,y_coord];
 		foreach(int id in cell_list){
 			if (id != _ID){
@@ -364,6 +376,52 @@ public class Fish : Agent {
 		}
 	}
 
+	void FindNeighborsGridKNN(List<Fish> neighbors){
+		//Finds the K-nearest neighbors within the grid through accessing neighboring grid int lists
+		//This function iterates through the neighbors and finds the k nearest neighbors through conducting linear search.
+		int count = 0;
+		int[] xindices = new int[3]{x_coord-1, x_coord, x_coord + 1};
+		int[] yindices = new int[3]{y_coord-1, y_coord, y_coord + 1};
+
+		//Create a list of copies of int lists from Aquarium Manager
+		//Necessary to copy these lists, since we want to delete ints from the lists
+		//and the other fish need access to them too.
+	
+		List<List<int>> neighboringCells = new List<List<int>>();
+
+		foreach (int x in xindices){
+			if (x >= 0 && x < AquariumManager.HORIZONTAL_SQUARE_COUNT){
+				foreach (int y in yindices){
+					if (y >= 0 && y < AquariumManager.VERTICAL_SQUARE_COUNT){
+						List<int> cell = new List<int>(AquariumManager.fishGrid[x,y]); //copy the list itself, instead of a reference
+						neighboringCells.Add(cell);
+					}
+				}
+			}
+		}
+
+		//Next is the linear search to find the K-nearest neighbors.
+		while (count < K_NEAREST_NEIGHBORS){
+			float distance = float.MaxValue;
+			int nearestID = -1;
+			for (int i = 0; i < neighboringCells.Count; i++){
+				for(int j = 0; j < neighboringCells[i].Count; j++){
+					float d = Vector3.Distance(this.transform.position, ALL_FISH[neighboringCells[i][j]].transform.position);
+					if (d< distance && distance > 0){
+						distance = d;
+						nearestID = neighboringCells[i][j];
+						neighboringCells[i].RemoveAt(j);
+					}
+				}
+			}
+			if (nearestID == -1)
+				return;
+			neighbors.Add(ALL_FISH[nearestID]);
+			count++;
+		}
+
+	}
+
 	void FindPredatorsBrute(List<Shark> predators){
 		// Works exactly the same way as FindNeighbors, except for sharks
 		foreach(GameObject shark in GameObject.FindGameObjectsWithTag("Shark")){
@@ -375,6 +433,7 @@ public class Fish : Agent {
 	}
 
 	void FindPredatorsGrid(List<Shark> predators){
+		//See the FindNeighborsGrid comments in the Fish Class.
 		List<int> cell_list =AquariumManager.sharkGrid[x_coord,y_coord];
 
 		int[] xindices = new int[3]{x_coord-1, x_coord, x_coord + 1};
@@ -390,6 +449,46 @@ public class Fish : Agent {
 				}
 			}
 		}
+	}
+
+	void FindPredatorsGridKNN(List<Shark> predators){
+		//See the FindNeighborsGridKNN comments in the Fish Class.
+		int count = 0;
+		int[] xindices = new int[3]{x_coord-1, x_coord, x_coord + 1};
+		int[] yindices = new int[3]{y_coord-1, y_coord, y_coord + 1};
+	
+		List<List<int>> neighboringCells = new List<List<int>>();
+
+		foreach (int x in xindices){
+			if (x >= 0 && x < AquariumManager.HORIZONTAL_SQUARE_COUNT){
+				foreach (int y in yindices){
+					if (y >= 0 && y < AquariumManager.VERTICAL_SQUARE_COUNT){
+						List<int> cell = new List<int>(AquariumManager.sharkGrid[x,y]); //copy the list itself, instead of a reference
+						neighboringCells.Add(cell);
+					}
+				}
+			}
+		}
+
+		while (count < K_NEAREST_NEIGHBORS){
+			float distance = float.MaxValue;
+			int nearestID = -1;
+			for (int i = 0; i < neighboringCells.Count; i++){
+				for(int j = 0; j < neighboringCells[i].Count; j++){
+					float d = Vector3.Distance(this.transform.position, Shark.ALL_SHARKS[neighboringCells[i][j]].transform.position);
+					if (d< distance && distance > 0){
+						distance = d;
+						nearestID = neighboringCells[i][j];
+						neighboringCells[i].RemoveAt(j);
+					}
+				}
+			}
+			if (nearestID == -1)
+				return;
+			predators.Add(Shark.ALL_SHARKS[nearestID]);
+			count++;
+		}
+
 	}
 
 	Vector2 Flock(List<Fish> neighbors){

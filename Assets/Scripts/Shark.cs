@@ -8,10 +8,10 @@ public class Shark : Agent {
 	public static float STEER_CONST = 0.06f;
 
 	public static float COHERE_WEIGHT = (3f);
-	public static float SEPERATE_WEIGHT = 6f;
+	public static float SEPERATE_WEIGHT = 7f;
 	public static float WANDER_WEIGHT = 1f;
 	public static float TEMP_RADIUS = 15f;
-	public static float SEPERATION_RADIUS = 6f;
+	public static float SEPERATION_RADIUS = 7.5f;
 
 	public static float SHARK_WIDTH = 3.0f;
 	public static float SHARK_HEIGHT = 2.05f;
@@ -30,6 +30,8 @@ public class Shark : Agent {
 
 	public static bool BRUTE_FORCE = false;
 	public static bool GRID_IMPLEMENTATION = true;
+	public static bool K_NEAREST_NEIGHBORS_IMPLEMENTATION = false;
+	public static int K_NEAREST_NEIGHBORS = 5;
 
 	public static List<Shark> ALL_SHARKS;
 	public static bool STARTED = false;
@@ -93,7 +95,10 @@ public class Shark : Agent {
 		}
 
 		if(GRID_IMPLEMENTATION){
-			FindNeighborsGrid (neighbors);
+			if(K_NEAREST_NEIGHBORS_IMPLEMENTATION)
+				FindNeighborsGridKNN(neighbors);
+			else
+				FindNeighborsGrid (neighbors);
 		}
 
 		// Check if the shark should still be wandering
@@ -112,10 +117,14 @@ public class Shark : Agent {
 			
 		List<Fish> prey = new List<Fish>();
 		if(BRUTE_FORCE){
-			FindPreyBrute (prey);
+				FindPreyBrute (prey);
 		}
+
 		if(GRID_IMPLEMENTATION){
-			FindPreyGrid(prey);
+			if(K_NEAREST_NEIGHBORS_IMPLEMENTATION)
+				FindPreyGridKNN(prey);
+			else
+				FindPreyGrid(prey);
 		}
 
 		PreyBiteReady (prey);
@@ -233,6 +242,7 @@ public class Shark : Agent {
 	}
 
 	void FindPreyGrid(List<Fish> prey){
+		//See the FindNeighborsGrid comments in the Fish Class.
 		List<int> cell_list =AquariumManager.fishGrid[x_coord,y_coord];
 
 		int[] xindices = new int[3]{x_coord-1, x_coord, x_coord + 1};
@@ -250,6 +260,46 @@ public class Shark : Agent {
 		}
 	}
 
+	void FindPreyGridKNN(List<Fish> prey){
+		//See the FindNeighborsGridKNN comments in the Fish Class.
+		int count = 0;
+		int[] xindices = new int[3]{x_coord-1, x_coord, x_coord + 1};
+		int[] yindices = new int[3]{y_coord-1, y_coord, y_coord + 1};
+	
+		List<List<int>> neighboringCells = new List<List<int>>();
+
+		foreach (int x in xindices){
+			if (x >= 0 && x < AquariumManager.HORIZONTAL_SQUARE_COUNT){
+				foreach (int y in yindices){
+					if (y >= 0 && y < AquariumManager.VERTICAL_SQUARE_COUNT){
+						List<int> cell = new List<int>(AquariumManager.fishGrid[x,y]); //copy the list itself, instead of a reference
+						neighboringCells.Add(cell);
+					}
+				}
+			}
+		}
+
+		while (count < K_NEAREST_NEIGHBORS){
+			float distance = float.MaxValue;
+			int nearestID = -1;
+			for (int i = 0; i < neighboringCells.Count; i++){
+				for(int j = 0; j < neighboringCells[i].Count; j++){
+					float d = Vector3.Distance(this.transform.position, Fish.ALL_FISH[neighboringCells[i][j]].transform.position);
+					if (d< distance && distance > 0){
+						distance = d;
+						nearestID = neighboringCells[i][j];
+						neighboringCells[i].RemoveAt(j);
+					}
+				}
+			}
+			if (nearestID == -1)
+				return;
+			prey.Add(Fish.ALL_FISH[nearestID]);
+			count++;
+		}
+		 
+	}
+
 	void FindNeighborsBrute(List<Shark> neighbors){
 		// Currently iterates through the entire list of shark within our scene
 		// and finds the ones within a certain radius of the shark
@@ -263,6 +313,7 @@ public class Shark : Agent {
 	}
 
 	void FindNeighborsGrid(List<Shark> neighbors){
+		//See the FindNeighborsGrid comments in the Fish Class.
 		int count = 0;
 		List<int> cell_list =AquariumManager.sharkGrid[x_coord,y_coord];
 		foreach(int id in cell_list){
@@ -285,6 +336,46 @@ public class Shark : Agent {
 				}
 			}
 		}
+	}
+
+	void FindNeighborsGridKNN(List<Shark> neighbors){
+		//See the FindNeighborsGridKNN comments in the Fish Class.
+		int count = 0;
+		int[] xindices = new int[3]{x_coord-1, x_coord, x_coord + 1};
+		int[] yindices = new int[3]{y_coord-1, y_coord, y_coord + 1};
+	
+		List<List<int>> neighboringCells = new List<List<int>>();
+
+		foreach (int x in xindices){
+			if (x >= 0 && x < AquariumManager.HORIZONTAL_SQUARE_COUNT){
+				foreach (int y in yindices){
+					if (y >= 0 && y < AquariumManager.VERTICAL_SQUARE_COUNT){
+						List<int> cell = new List<int>(AquariumManager.sharkGrid[x,y]); //copy the list itself, instead of a reference
+						neighboringCells.Add(cell);
+					}
+				}
+			}
+		}
+
+		while (count < K_NEAREST_NEIGHBORS){
+			float distance = float.MaxValue;
+			int nearestID = -1;
+			for (int i = 0; i < neighboringCells.Count; i++){
+				for(int j = 0; j < neighboringCells[i].Count; j++){
+					float d = Vector3.Distance(this.transform.position, ALL_SHARKS[neighboringCells[i][j]].transform.position);
+					if (d< distance && neighboringCells[i][j] != _ID){
+						distance = d;
+						nearestID = neighboringCells[i][j];
+						neighboringCells[i].RemoveAt(j);
+					}
+				}
+			}
+			if (nearestID == -1)
+				return;
+			neighbors.Add(ALL_SHARKS[nearestID]);
+			count++;
+		}
+
 	}
 
 	void PreyBiteReady(List<Fish> prey){
@@ -312,8 +403,10 @@ public class Shark : Agent {
 				poorfish.GetComponent<Fish> ().getY ()].Remove (poorfish.GetComponent<Fish> ());
 			AquariumManager.fishDict [poorfish.GetComponent<Fish> ().getX ().ToString () +
 			poorfish.GetComponent<Fish> ().getY ().ToString ()].Remove (poorfish.GetComponent<Fish> ().getID ());*/
-			AquariumManager.fishGrid[poorfish.GetComponent<Fish> ().getX (),
+			if (GRID_IMPLEMENTATION){
+				AquariumManager.fishGrid[poorfish.GetComponent<Fish> ().getX (),
 				poorfish.GetComponent<Fish> ().getY ()].Remove (poorfish.GetComponent<Fish> ().ID);
+			}
 			Destroy (poorfish);
 			Debug.Log ("A fish has been eaten!");
 			Fish.FISH_COUNT--;
