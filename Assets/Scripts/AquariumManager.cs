@@ -22,9 +22,13 @@ public class AquariumManager : MonoBehaviour {
 	public static int VERTICAL_SQUARE_COUNT = 6;
 	public static int HORIZONTAL_SQUARE_COUNT = 10;
 
+	//3D Integer List, keeps track of all the fish and their locations
+	//relative to cells in the grid, defined by the parameters above such as square_length 
+	//of each cell.
 	public static List<int>[,] fishGrid;
 	public static List<int>[,] sharkGrid;
 
+	//KD Trees to keep track of fish and sharks.
 	public static Node fishTree;
 	public static Node sharkTree;
 
@@ -45,7 +49,7 @@ public class AquariumManager : MonoBehaviour {
 
 	void Update() {
 		//Print FPS
-		print(1.0f / Time.deltaTime);
+		//print(1.0f / Time.deltaTime);
 
 		//On mouse click, make all the fish around the area clicked disperse
 		if (Input.GetMouseButtonDown(0)){
