@@ -29,24 +29,6 @@ public class AquariumManager : MonoBehaviour {
 	public static Node sharkTree;
 
 	void Start (){
-		/*
-		Node root = null;
-		List<float[]> array = new List<float[]> ();
-		array.Add(new float[] {30f,40f});
-		array.Add(new float[] {5f,25f});
-		array.Add(new float[] {70f,70f});
-		array.Add(new float[] {10f,12f});
-		array.Add(new float[] {50f,30f});
-		array.Add(new float[] {35f,45f});
-
-		for (int i = 0; i < 6; i++)
-			root = KDTree.insert(root, array[i], i);
-		Node newRoot = ObjectCopier.Clone(root);
-		root = KDTree.deleteNode(root, array[0]); 
-		print(root.point[0].ToString() + " " + root.point[1].ToString());
-		print(newRoot.point[0].ToString() + " " + newRoot.point[1].ToString());
-		int tester = KDTree.nearestNeighbor(newRoot, new float[] {31f,41f});
-		print(tester);*/
 
 		fishTree = null;
 		sharkTree = null;
@@ -62,8 +44,15 @@ public class AquariumManager : MonoBehaviour {
 	}
 
 	void Update() {
+		//Print FPS
 		print(1.0f / Time.deltaTime);
-		//Update text for fish and shark counters in the Aquarium
+
+		//On mouse click, make all the fish around the area clicked disperse
+		if (Input.GetMouseButtonDown(0)){
+			Vector3 point = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+			Vector2 position = (Vector2)point;
+			DisperseAgents(position);
+		}
 
 		// Build fish KD Tree.
 		fishTree = null;
@@ -81,6 +70,7 @@ public class AquariumManager : MonoBehaviour {
 			shark.transform.position.y}, shark.GetComponent<Shark>().ID);
 		}
 
+		//Update text for fish and shark counters in the Aquarium
 		fish_counter.GetComponent<UnityEngine.UI.Text>().text = Fish.FISH_COUNT.ToString() + " Fish";
 		shark_counter.GetComponent<UnityEngine.UI.Text>().text = Shark.SHARK_COUNT.ToString() + " Sharks";
 	}
@@ -188,4 +178,54 @@ public class AquariumManager : MonoBehaviour {
 			shark.setY (grid_y);
 		}
 	}
+
+	public static void DisperseAgents(Vector2 position){
+		int disperseTime = 80;
+		float xposition = position.x;
+		float yposition = position.y;
+
+		xposition += BACKGROUND_HALF_WIDTH;
+		yposition += BACKGROUND_HALF_HEIGHT;
+
+		// Find the grid cells that the mouse click position corresponds to.
+		int grid_x = (int)(xposition / SQUARE_LENGTH);
+		int grid_y = 0;
+
+		if (0 <= yposition && yposition < ALTERED_SQUARE_LENGTH)
+			grid_y = 0;
+		else if (yposition >= NORMAL_SQUARE_COUNT * SQUARE_LENGTH + ALTERED_SQUARE_LENGTH)
+			grid_y = NORMAL_SQUARE_COUNT + 1;
+		else {
+			grid_y = (int)((yposition - ALTERED_SQUARE_LENGTH) / SQUARE_LENGTH);
+			grid_y++;
+		}
+
+		int[] xindices = new int[3]{grid_x-1, grid_x, grid_x + 1};
+		int[] yindices = new int[3]{grid_y-1, grid_y, grid_y + 1}; 
+
+		foreach (int x in xindices){
+			if (x >= 0 && x < AquariumManager.HORIZONTAL_SQUARE_COUNT){
+				foreach (int y in yindices){
+					if (y >= 0 && y < AquariumManager.VERTICAL_SQUARE_COUNT){
+						foreach(int id in AquariumManager.fishGrid[x,y]){
+							if (Vector2.Distance((Vector2)(Fish.ALL_FISH[id].transform.position) , position) < 
+							Fish.TEMP_RADIUS){
+								Fish.ALL_FISH[id].setDisperse(disperseTime, position);
+							}
+						}
+						foreach(int id in AquariumManager.sharkGrid[x,y]){
+							if (Vector2.Distance((Vector2)(Shark.ALL_SHARKS[id].transform.position) , position) < 
+							Shark.TEMP_RADIUS){
+								Shark.ALL_SHARKS[id].setDisperse(disperseTime, position);
+							}
+						}
+					}
+				}
+			}
+		}
+
+	}
+
+
+	//END OF FILE
 }

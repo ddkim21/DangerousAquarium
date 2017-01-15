@@ -10,6 +10,7 @@ public class Shark : Agent {
 	public static float COHERE_WEIGHT = (3f);
 	public static float SEPERATE_WEIGHT = 7f;
 	public static float WANDER_WEIGHT = 1f;
+	public static float DISPERSE_WEIGHT = 10f;
 	public static float TEMP_RADIUS = 15f;
 	public static float SEPERATION_RADIUS = 7.5f;
 
@@ -28,6 +29,11 @@ public class Shark : Agent {
 	public Sprite biteSprite;
 	public GameObject blood;
 
+	//See fish class for comments on the below boolean variables.
+	//Note that all the booleans (with the exception of brute force)
+	//must be set true in one class if it is set true in the other class
+	//since Shark uses the fish Grid and fish uses the Shark Grid
+	//and the same for KD Trees.
 	public static bool BRUTE_FORCE = false;
 	public static bool GRID_IMPLEMENTATION = false;
 	public static bool K_NEIGHBORS_GRID_IMPLEMENTATION = false;
@@ -49,6 +55,8 @@ public class Shark : Agent {
 	private int SharkWander = 0;
 	private int SharkWanderHelper = 0;
 	private Vector2 WanderDirection = new Vector2();
+	private int DISPERSE_COUNTER = 0;
+	private Vector2 DISPERSE_LOCATION = new Vector2();
 
 	// Global ID and instance ID, since instantiated objects have same IDs
 	private static int _globalID = 0;
@@ -58,7 +66,6 @@ public class Shark : Agent {
 
 	void Awake (){
 		if (STARTED == false){
-			Debug.Log("This is being run");
 			ALL_SHARKS = new List<Shark>();
 			STARTED = true;
 		}
@@ -77,15 +84,25 @@ public class Shark : Agent {
 
 	// Update is called once per frame
 	void Update () {
-		if(GRID_IMPLEMENTATION){
-			AquariumManager.sharkGridUpdate(this);
-		}
+		//sharkGrid to be used for OnClick event for dispersing the sharks.
+		AquariumManager.sharkGridUpdate(this);
 
 		// Check if our shark is about to go out of bounds of the camera
 		string outofbound = OutOfBounds ();
 		if (outofbound != null) { //If about to go out of bounds
 			deter (outofbound); // Deter the direction to keep shark inbounds
 			orientDirection ();
+			DISPERSE_COUNTER = 0; //No longer disperse when hitting a wall.
+			return;
+		}
+
+		Vector2 modifier = new Vector2(0f,0f);
+
+
+		// Check if we are still in disperse mode (disperse movement away from mouseclick)
+		if (DISPERSE_COUNTER > 0){
+			modifier += moveDisperse() * DISPERSE_WEIGHT;
+			DISPERSE_COUNTER--; 
 		}
 
 		// Neighbor sharks are also used for the wander component
@@ -111,7 +128,7 @@ public class Shark : Agent {
 			Vector2 wanderSteer = wander ();
 			// Note that while wandering the shark still avoids other sharks.
 			this.GetComponent<Rigidbody2D> ().velocity += wanderSteer * WANDER_WEIGHT + 
-				Seperate (neighbors) * SEPERATE_WEIGHT;
+				Seperate (neighbors) * SEPERATE_WEIGHT + modifier;
 			orientDirection ();
 			SharkWander--;
 			if (SharkWander == 0){
@@ -140,7 +157,7 @@ public class Shark : Agent {
 
 		//Add modifier to velocity.
 		//Modifier is determined by the hunt function.
-		Vector2 modifier = Hunt(prey);
+		modifier += Hunt(prey);
 		modifier += Seperate (neighbors) * SEPERATE_WEIGHT;
 		Vector2 prepVelocity = this.GetComponent<Rigidbody2D>().velocity + modifier;
 		//Limit speed of shark if necessary
@@ -252,7 +269,6 @@ public class Shark : Agent {
 
 	void FindPreyGrid(List<Fish> prey){
 		//See the FindNeighborsGrid comments in the Fish Class.
-		List<int> cell_list =AquariumManager.fishGrid[x_coord,y_coord];
 
 		int[] xindices = new int[3]{x_coord-1, x_coord, x_coord + 1};
 		int[] yindices = new int[3]{y_coord-1, y_coord, y_coord + 1}; 
@@ -344,7 +360,6 @@ public class Shark : Agent {
 
 	void FindNeighborsGrid(List<Shark> neighbors){
 		//See the FindNeighborsGrid comments in the Fish Class.
-		int count = 0;
 		List<int> cell_list =AquariumManager.sharkGrid[x_coord,y_coord];
 		foreach(int id in cell_list){
 			if (id != _ID){
@@ -449,11 +464,8 @@ public class Shark : Agent {
 			spriteRenderer.sprite = normalSprite;
 			Instantiate (blood, poorfish.transform.position, Quaternion.identity);
 			this.GetComponent<AudioSource> ().Play ();
-			/*AquariumManager.fishGrid [poorfish.GetComponent<Fish> ().getX (),
-				poorfish.GetComponent<Fish> ().getY ()].Remove (poorfish.GetComponent<Fish> ());
-			AquariumManager.fishDict [poorfish.GetComponent<Fish> ().getX ().ToString () +
-			poorfish.GetComponent<Fish> ().getY ().ToString ()].Remove (poorfish.GetComponent<Fish> ().getID ());*/
-			if (GRID_IMPLEMENTATION){
+			// Sometimes fish can be eaten before they have a chance to update.
+			if (poorfish.GetComponent<Fish> ().getX () != -1){
 				AquariumManager.fishGrid[poorfish.GetComponent<Fish> ().getX (),
 				poorfish.GetComponent<Fish> ().getY ()].Remove (poorfish.GetComponent<Fish> ().ID);
 			}
@@ -556,6 +568,20 @@ public class Shark : Agent {
 		get{
 		return(_ID);
 		}
+	}
+
+	public void setDisperse(int time, Vector2 location){
+		DISPERSE_COUNTER = time;
+		DISPERSE_LOCATION = location;
+	}
+
+	public Vector2 moveDisperse(){
+		Vector2 currentPos = (Vector2)this.transform.position;
+		float distance = Vector2.Distance(currentPos, DISPERSE_LOCATION);
+		Vector2 desired = currentPos - DISPERSE_LOCATION;
+		desired.Normalize();
+		desired /= distance;
+		return(steerTo(desired));
 	}
 
 }

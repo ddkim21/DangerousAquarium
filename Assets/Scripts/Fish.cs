@@ -15,6 +15,7 @@ public class Fish : Agent {
 	public static float SEPERATE_WEIGHT = (6f);
 	public static float ESCAPE_WEIGHT = (27.5f);
 	public static float WALL_WEIGHT = 12.5f;
+	public static float DISPERSE_WEIGHT = 100f;
 	public static float SEPERATION_RADIUS = 2f;
 	// Temp radius, used for finding neighbors
 	// will be replaced by K Nearest Neighbors implementation
@@ -31,9 +32,16 @@ public class Fish : Agent {
 
 	//Lastly, our count of fish in order to keep track of the number of fish
 	public static int FISH_COUNT = 0;
+	//Set one of the below booleans to true, and the rest false
+	//Which one is set true determines which method is used to calculate neighbors
+	//Brute force
 	public static bool BRUTE_FORCE = false;
+	//Grid implementation
 	public static bool GRID_IMPLEMENTATION = false;
+	//K nearest neighbors grid implementation
 	public static bool K_NEIGHBORS_GRID_IMPLEMENTATION = false;
+	//KD tree nearest neighbors implementation. 
+	//By far the fastest method.
 	public static bool KD_TREE_IMPLEMENTATION = true;
 	public static int K_NEAREST_NEIGHBORS = 6;
 
@@ -48,6 +56,8 @@ public class Fish : Agent {
 	// which this happens, the issue still exists. I have tried other steering methods,
 	// and none seem to maintain the type of swimming behavior I desire.
 	private int CORNER_ESCAPE_COUNTER = 0;
+	private int DISPERSE_COUNTER = 0;
+	private Vector2 DISPERSE_LOCATION = new Vector2();
 
 	// Global ID and instance ID, since instantiated objects have same IDs
 	private static int _globalID = 0;
@@ -55,7 +65,6 @@ public class Fish : Agent {
 
 	void Awake(){
 		if (STARTED == false){
-			Debug.Log("This is being run");
 			ALL_FISH = new List<Fish>();
 			STARTED = true;
 		}
@@ -73,10 +82,9 @@ public class Fish : Agent {
 	
 	// Update is called once per frame
 	void Update () {
+		//fishGrid to be used for OnClick event for dispersing the fish.
+		AquariumManager.fishGridUpdate(this);
 
-		if(GRID_IMPLEMENTATION){
-			AquariumManager.fishGridUpdate(this);
-		}
 
 		// First check if we are still running from a corner
 		if (CORNER_ESCAPE_COUNTER > 0){
@@ -90,7 +98,16 @@ public class Fish : Agent {
 		if (outofbound != null) { //If about to go out of bounds
 			deter (outofbound); // Deter the direction to keep fish inbounds
 			setOrientation();
+			DISPERSE_COUNTER = 0; //No longer disperse when hitting a wall.
 			return;
+		}
+
+		Vector2 modifier = new Vector2(0f,0f);
+
+		// Check if we are still in disperse mode (disperse movement away from mouseclick)
+		if (DISPERSE_COUNTER > 0){
+			modifier += moveDisperse() * DISPERSE_WEIGHT;
+			DISPERSE_COUNTER--; 
 		}
 
 		// Create and populate list of neighbors
@@ -136,7 +153,7 @@ public class Fish : Agent {
 
 		//Add modifier to the velocity.
 		//Modifier is determined by the Flock function and Escape function. 
-		Vector2 modifier = Flock(neighbors) + Escape(predators) * ESCAPE_WEIGHT;
+		modifier += Flock(neighbors) + Escape(predators) * ESCAPE_WEIGHT;
 		//Also include potential wall buffers
 		modifier += steerAwayFromWalls() * WALL_WEIGHT;
 		Vector2 prepVelocity = this.GetComponent<Rigidbody2D>().velocity + modifier;
@@ -464,7 +481,6 @@ public class Fish : Agent {
 
 	void FindPredatorsGrid(List<Shark> predators){
 		//See the FindNeighborsGrid comments in the Fish Class.
-		List<int> cell_list =AquariumManager.sharkGrid[x_coord,y_coord];
 
 		int[] xindices = new int[3]{x_coord-1, x_coord, x_coord + 1};
 		int[] yindices = new int[3]{y_coord-1, y_coord, y_coord + 1}; 
@@ -689,5 +705,19 @@ public class Fish : Agent {
 		get{
 		return(_ID);
 		}
+	}
+
+	public void setDisperse(int time, Vector2 location){
+		DISPERSE_COUNTER = time;
+		DISPERSE_LOCATION = location;
+	}
+
+	public Vector2 moveDisperse(){
+		Vector2 currentPos = (Vector2)this.transform.position;
+		float distance = Vector2.Distance(currentPos, DISPERSE_LOCATION);
+		Vector2 desired = currentPos - DISPERSE_LOCATION;
+		desired.Normalize();
+		desired /= distance;
+		return(steerTo(desired));
 	}
 }
