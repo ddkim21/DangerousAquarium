@@ -4,22 +4,33 @@ using UnityEngine;
 using System.Linq;
 
 public class Fish : Agent {
-	// Set our weights for the flocking behavior function
-	// A la Boids model https://en.wikipedia.org/wiki/Boids
+	//Set max speed of a fish
 	public static float MAX_SPEED = 10f;
+	//Set max steering force, in order to prevent fish from turning too quickly
 	public static float STEER_CONST = 0.006f;
+	//Custom escape constant steering force (wanted to tune movement)
 	public static float ESCAPE_CONST = 0.006f;
 
+	// Set our weights for the flocking behavior function
+	// A la Boids model https://en.wikipedia.org/wiki/Boids
+	// These weights determine which component of a fish's movement 
+	// has the most impact on their steering force, or the component that 
+	// determines their velocity.
 	public static float COHERE_WEIGHT = (4f);
 	public static float ALIGN_WEIGHT = (4f);
 	public static float SEPERATE_WEIGHT = (6f);
-	public static float ESCAPE_WEIGHT = (27.5f);
-	public static float WALL_WEIGHT = 12.5f;
-	public static float DISPERSE_WEIGHT = 100f;
+	//Radius where fish separate from one another. This is the separation component of Boids.
 	public static float SEPERATION_RADIUS = 2f;
-	// Temp radius, used for finding neighbors
-	// will be replaced by K Nearest Neighbors implementation
+	//This is a separate weight for running away from sharks
+	public static float ESCAPE_WEIGHT = (27.5f);
+	//Seperate weight for steering away from walls.
+	public static float WALL_WEIGHT = 12.5f;
+	//Seperate weight for dispersing on click.
+	public static float DISPERSE_WEIGHT = 100f;
+	// Radius, used for finding neighbors
+	// Also used in the KNN implementations. Despite the word "temp", it is a permanent feature.
 	public static float TEMP_RADIUS = 15f;
+	// Radius by which the fish detect predators, and get steered away from predators.
 	public static float PREDATION_RADIUS = 10f;
 
 	// Fish width and fish height, useful for figuring out
@@ -32,6 +43,7 @@ public class Fish : Agent {
 
 	//Lastly, our count of fish in order to keep track of the number of fish
 	public static int FISH_COUNT = 0;
+
 	//Set one of the below booleans to true, and the rest false
 	//Which one is set true determines which method is used to calculate neighbors
 	//Brute force
@@ -45,7 +57,9 @@ public class Fish : Agent {
 	public static bool KD_TREE_IMPLEMENTATION = true;
 	public static int K_NEAREST_NEIGHBORS = 6;
 
+	//Keep a hash of all the fish using their unique IDs
 	public static List<Fish> ALL_FISH;
+	//If started, initialize the list later in the code.
 	public static bool STARTED = false;
 
 	// Private Frame Counter for Corner situation
@@ -56,14 +70,17 @@ public class Fish : Agent {
 	// which this happens, the issue still exists. I have tried other steering methods,
 	// and none seem to maintain the type of swimming behavior I desire.
 	private int CORNER_ESCAPE_COUNTER = 0;
+	// Counter for disperse situation. Once the counter is done, the fish acts as normal.
 	private int DISPERSE_COUNTER = 0;
 	private Vector2 DISPERSE_LOCATION = new Vector2();
 
-	// Global ID and instance ID, since instantiated objects have same IDs
+	// Global ID and instanceID, since instantiated objects have same Object IDs
+	// I decided to create my own custom ones.
 	private static int _globalID = 0;
 	private int _ID = 0;
 
 	void Awake(){
+	//Initialize list and ID.
 		if (STARTED == false){
 			ALL_FISH = new List<Fish>();
 			STARTED = true;
@@ -106,15 +123,13 @@ public class Fish : Agent {
 
 		// Check if we are still in disperse mode (disperse movement away from mouseclick)
 		if (DISPERSE_COUNTER > 0){
+			//Add the disperse steering component to the modifier
 			modifier += moveDisperse() * DISPERSE_WEIGHT;
 			DISPERSE_COUNTER--; 
 		}
 
 		// Create and populate list of neighbors
-		// or fish within the radius of the current fish.
-		// Will be changed to KNN.
-		// List<Fish> neighbors = new List<Fish> ();
-		// FindNeighbors (neighbors);
+		// Method depends on which boolean from above is active.
 		// Also create and populate a list of local predators.
 		List<Fish> neighbors = new List<Fish>();
 		List<Shark> predators = new List<Shark> ();
@@ -139,9 +154,6 @@ public class Fish : Agent {
 			FindNeighborsKDTree(neighbors);
 			FindPredatorsKDTree(predators);
 		}
-
-		//Parallel to above for finding sharks.
-
 
 		//Before steering based on boids and predators, check if we are in a corner situation
 		string corner = Cornered(predators); // returns null or corner name

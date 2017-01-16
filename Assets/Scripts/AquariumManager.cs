@@ -4,18 +4,21 @@ using UnityEngine;
 
 public class AquariumManager : MonoBehaviour {
 
+	// Below useful for instantiating fishes and  sharks with the add buttons
 	public GameObject fish;
 	public GameObject shark;
 
 	public GameObject fishes;
 	public GameObject sharks;
 
+	// For displaying counts of both
 	public GameObject fish_counter;
 	public GameObject shark_counter;
 
 	public static float BACKGROUND_HALF_WIDTH = 50f;
 	public static float BACKGROUND_HALF_HEIGHT = 28.125f;
 
+	// Dimensions of the 2D Grid used to keep track of where fish and sharks are.
 	public static float SQUARE_LENGTH = 10f;
 	public static int NORMAL_SQUARE_COUNT = 4;
 	public static float ALTERED_SQUARE_LENGTH = 8.125f;

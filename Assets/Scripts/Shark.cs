@@ -4,26 +4,37 @@ using System.Linq;
 using UnityEngine;
 
 public class Shark : Agent {
+	//Set max speed of shark, less than a fish.
 	public static float MAX_SPEED = 7f;
+	//Set max steering force to prevent a shark from turning too quickly.
 	public static float STEER_CONST = 0.006f;
 
+	// Set our weights for hunting behavior
 	public static float COHERE_WEIGHT = (11f);
 	public static float SEPERATE_WEIGHT = 12.5f;
+
+	// Weight placed on wandering around the Aquarium.
 	public static float WANDER_WEIGHT = 8.5f;
+	// Weight for dispersing on mouse click.
 	public static float DISPERSE_WEIGHT = 35f;
+	// Radius for detecting eatable fish
 	public static float TEMP_RADIUS = 15f;
+	// Radius for detecting fellow sharks
 	public static float SEPERATION_RADIUS = 7.5f;
 
 	public static float SHARK_WIDTH = 3.0f;
 	public static float SHARK_HEIGHT = 2.05f;
+
+	// Radius for opening the shark's mouth to try and bite
 	public static float BITE_RADIUS = 5f;
+	// Radius for closing the mouth and eating a fish
 	public static float EAT_RADIUS = 2f;
 
 	// Background width and background height is useful for deterring from walls
 	public static float BACKGROUND_HALF_WIDTH = 50f;
 	public static float BACKGROUND_HALF_HEIGHT = 28.125f;
 
-	//Lastly, our count of fish in order to keep track of the number of sharks
+	//Lastly, our count of sharks in order to keep track of the number of sharks
 	public static int SHARK_COUNT = 0;
 
 	public Sprite biteSprite;
@@ -43,7 +54,7 @@ public class Shark : Agent {
 	public static List<Shark> ALL_SHARKS;
 	public static bool STARTED = false;
 
-
+	//Sprites for biting
 	private SpriteRenderer spriteRenderer; 
 	private Sprite normalSprite;
 
@@ -55,16 +66,17 @@ public class Shark : Agent {
 	private int SharkWander = 0;
 	private int SharkWanderHelper = 0;
 	private Vector2 WanderDirection = new Vector2();
+	// Similar to above for dispersing on mouseClick.
 	private int DISPERSE_COUNTER = 0;
 	private Vector2 DISPERSE_LOCATION = new Vector2();
 
-	// Global ID and instance ID, since instantiated objects have same IDs
+	// Global ID and instanceID, since instantiated objects have same Object IDs
+	// I decided to create my own custom ones.
+
 	private static int _globalID = 0;
 	private int _ID = 0;
 
-
-
-	void Awake (){
+	void Awake (){ // initialize list and ID
 		if (STARTED == false){
 			ALL_SHARKS = new List<Shark>();
 			STARTED = true;
@@ -106,6 +118,7 @@ public class Shark : Agent {
 		}
 
 		// Neighbor sharks are also used for the wander component
+		// To still separate from neighbors if too close
 		List<Shark> neighbors = new List<Shark> ();
 
 		if(BRUTE_FORCE){
@@ -136,7 +149,9 @@ public class Shark : Agent {
 			}
 			return;
 		}
-			
+
+		//If not wandering, then it's time to hunt!
+				
 		List<Fish> prey = new List<Fish>();
 		if(BRUTE_FORCE){
 				FindPreyBrute (prey);
